@@ -16,8 +16,7 @@ export function Layout({ children }: LayoutProps) {
         <main className="flex-1 flex flex-col">
           <header className="h-14 flex items-center justify-between border-b border-border px-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex items-center space-x-4">
-              <SidebarTrigger className="h-8 w-8" />
-              <h1 className="text-lg font-semibold text-foreground">Company Management</h1>
+            
             </div>
             
             <div className="flex items-center space-x-4">

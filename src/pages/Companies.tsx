@@ -1,65 +1,58 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Plus, Search, Grid, List, SortAsc } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CompanyCard, Company } from "@/components/CompanyCard"
 import { useNavigate } from "react-router-dom"
+import CompanyDetail from "./CompanyDetail"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 
-// Mock data - same as Dashboard for consistency
-const mockCompanies: Company[] = [
-  {
-    id: "1",
-    name: "TechFlow Solutions",
-    description: "Leading software development company specializing in web and mobile applications for enterprise clients.",
-    industry: "Technology",
-    location: "San Francisco, CA",
-    foundedYear: 2018,
-    employeeCount: 45,
-    teamMembers: [
-      { id: "1", name: "Sarah Johnson", role: "CEO", email: "sarah@techflow.com" },
-      { id: "2", name: "Mike Chen", role: "CTO", email: "mike@techflow.com" },
-      { id: "3", name: "Emma Davis", role: "Lead Designer", email: "emma@techflow.com" },
-      { id: "4", name: "Alex Rodriguez", role: "Senior Developer", email: "alex@techflow.com" },
-    ]
-  },
-  {
-    id: "2",
-    name: "GreenEarth Consulting",
-    description: "Environmental consulting firm helping businesses reduce their carbon footprint and implement sustainable practices.",
-    industry: "Environmental",
-    location: "Portland, OR",
-    foundedYear: 2020,
-    employeeCount: 28,
-    teamMembers: [
-      { id: "5", name: "Dr. James Wilson", role: "Founder", email: "james@greenearth.com" },
-      { id: "6", name: "Lisa Park", role: "Operations Manager", email: "lisa@greenearth.com" },
-      { id: "7", name: "Tom Brown", role: "Environmental Analyst", email: "tom@greenearth.com" },
-    ]
-  },
-  {
-    id: "3",
-    name: "DataVision Analytics",
-    description: "Data science and analytics company providing insights and business intelligence solutions for Fortune 500 companies.",
-    industry: "Data & Analytics",
-    location: "Austin, TX",
-    foundedYear: 2019,
-    employeeCount: 67,
-    teamMembers: [
-      { id: "8", name: "Rachel Kim", role: "Data Scientist", email: "rachel@datavision.com" },
-      { id: "9", name: "David Thompson", role: "Product Manager", email: "david@datavision.com" },
-      { id: "10", name: "Maria Garcia", role: "Business Analyst", email: "maria@datavision.com" },
-      { id: "11", name: "John Smith", role: "Engineering Lead", email: "john@datavision.com" },
-    ]
-  }
-]
+interface BackendCompany {
+  id: number | string;
+  title: string;
+  description?: string;
+  logo?: string;
+  email?: string;
+  nb_users?: number;
+  status?: string;
+}
 
 export default function Companies() {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState("name")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [companies] = useState<Company[]>(mockCompanies)
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
+
+  useEffect(() => {
+    setLoading(true)
+    fetch("http://localhost:5000/companies")
+      .then(res => res.json())
+      .then((data: BackendCompany[]) => {
+        const mapped = data.map((c) => ({
+          id: c.id?.toString() || c.id,
+          name: c.title || c.name || "Untitled Company",
+          description: c.description || "",
+          industry: "N/A",
+          location: "N/A",
+          foundedYear: 2020,
+          employeeCount: c.nb_users || 0,
+          logo: c.logo ? `http://localhost:5000${c.logo}` : undefined,
+          teamMembers: [],
+        }))
+        setCompanies(mapped)
+        setLoading(false)
+      })
+      .catch(err => {
+        setError("Failed to fetch companies")
+        setLoading(false)
+      })
+  }, [])
 
   const filteredAndSortedCompanies = companies
     .filter(company =>
@@ -81,6 +74,14 @@ export default function Companies() {
           return 0
       }
     })
+
+  if (loading) {
+    return <div className="py-12 text-center text-muted-foreground">Loading companies...</div>
+  }
+
+  if (error) {
+    return <div className="py-12 text-center text-destructive">{error}</div>
+  }
 
   return (
     <div className="space-y-6">
@@ -112,7 +113,6 @@ export default function Companies() {
             className="pl-9 border-border focus:ring-primary"
           />
         </div>
-        
         <Select value={sortBy} onValueChange={setSortBy}>
           <SelectTrigger className="w-[180px] border-border">
             <SortAsc className="mr-2 h-4 w-4" />
@@ -125,7 +125,6 @@ export default function Companies() {
             <SelectItem value="industry">Industry</SelectItem>
           </SelectContent>
         </Select>
-        
         <div className="flex items-center border border-border rounded-lg">
           <Button
             variant={viewMode === "grid" ? "default" : "ghost"}
@@ -153,7 +152,6 @@ export default function Companies() {
             {filteredAndSortedCompanies.length} of {companies.length} companies
           </p>
         </div>
-        
         {filteredAndSortedCompanies.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Search className="h-12 w-12 text-muted-foreground mb-4" />
@@ -161,7 +159,7 @@ export default function Companies() {
             <p className="text-muted-foreground mb-4">
               Try adjusting your search criteria or add a new company.
             </p>
-            <Button onClick={() => navigate("/create-company")}>
+            <Button onClick={() => navigate("/create-company")}> 
               <Plus className="mr-2 h-4 w-4" />
               Add Company
             </Button>
@@ -172,11 +170,20 @@ export default function Companies() {
             : "space-y-4"
           }>
             {filteredAndSortedCompanies.map((company) => (
-              <CompanyCard key={company.id} company={company} />
+              <div key={company.id} onClick={() => { setSelectedCompanyId(company.id); setIsDetailOpen(true); }} style={{ cursor: 'pointer' }}>
+                <CompanyCard company={company} />
+              </div>
             ))}
           </div>
         )}
       </div>
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="max-w-2xl">
+          {selectedCompanyId && (
+            <CompanyDetail companyId={selectedCompanyId} onClose={() => setIsDetailOpen(false)} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

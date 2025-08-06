@@ -43,17 +43,17 @@ export function AppSidebar() {
       collapsible="icon"
     >
       <SidebarContent className="bg-background border-r border-border">
-        <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center justify-between p-3 border-b border-border">
           {!isCollapsed && (
             <div className="flex items-center space-x-2">
               <Building2 className="h-6 w-6 text-primary" />
-              <span className="font-semibold text-lg">CompanyHub</span>
+              <span className="font-semibold text-lg">MangerSol</span>
             </div>
           )}
-          <SidebarTrigger className="h-8 w-8" />
+        <SidebarTrigger className="h-8 w-8" />
         </div>
 
-        <SidebarGroup className="px-2 py-4">
+        <SidebarGroup className="px-2 py-2">
           <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>
             Navigation
           </SidebarGroupLabel>
@@ -61,7 +61,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild className="mb-1">
+                  <SidebarMenuButton asChild className="mb-2">
                     <NavLink 
                       to={item.url} 
                       end={item.url === "/"}

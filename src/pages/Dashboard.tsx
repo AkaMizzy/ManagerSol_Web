@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Plus, Search, Filter, Building2, Users, TrendingUp } from "lucide-react"
+import { Plus, Search, Building2, Users, TrendingUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -136,13 +136,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Filter */}
-      <div className="flex justify-end">
-        <Button variant="outline" className="border-border">
-          <Filter className="mr-2 h-4 w-4" />
-          Filters
-        </Button>
-      </div>
+
 
       {/* Companies Grid */}
       <div className="space-y-4">

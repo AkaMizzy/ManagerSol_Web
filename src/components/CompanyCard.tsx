@@ -41,11 +41,11 @@ export function CompanyCard({ company }: CompanyCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
-            <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center">
+            <div className="h-20 w-20 rounded-lg bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center">
               {company.logo ? (
-                <img src={company.logo} alt={company.name} className="h-8 w-8 rounded" />
+                <img src={company.logo} alt={company.name} className="h-16 w-16 object-cover rounded" />
               ) : (
-                <Building2 className="h-6 w-6 text-primary-foreground" />
+                <Building2 className="h-10 w-10 text-primary-foreground" />
               )}
             </div>
             <div>
