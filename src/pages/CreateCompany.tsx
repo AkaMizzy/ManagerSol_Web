@@ -7,6 +7,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 
+const sectorOptions = [
+  "Technology",
+  "Healthcare",
+  "Finance",
+  "Education"
+]
+
 export default function CreateCompany() {
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -19,6 +26,8 @@ export default function CreateCompany() {
     email: "",
     nb_users: 1,
     status: "pending",
+    foundedYear: new Date().getFullYear(),
+    sector: "Technology"
   })
 
   const handleInputChange = (field: string, value: string | number) => {
@@ -51,6 +60,8 @@ export default function CreateCompany() {
     data.append("email", formData.email)
     data.append("nb_users", String(formData.nb_users))
     data.append("status", formData.status)
+    data.append("foundedYear", String(formData.foundedYear))
+    data.append("sector", formData.sector)
     if (logoFile) {
       data.append("logo", logoFile)
     }
@@ -157,6 +168,37 @@ export default function CreateCompany() {
                 onChange={(e) => handleInputChange("status", e.target.value)}
                 className="border-border focus:ring-primary"
               />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="foundedYear">Founded Year</Label>
+              <Input
+                id="foundedYear"
+                type="number"
+                value={formData.foundedYear}
+                onChange={(e) => handleInputChange("foundedYear", parseInt(e.target.value))}
+                className="border-border focus:ring-primary"
+                min="1800"
+                max={new Date().getFullYear()}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Sector</Label>
+              <div className="flex flex-wrap gap-4">
+                {sectorOptions.map(option => (
+                  <label key={option} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="sector"
+                      value={option}
+                      checked={formData.sector === option}
+                      onChange={() => handleInputChange("sector", option)}
+                    />
+                    <span>{option}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
           <div className="space-y-2">

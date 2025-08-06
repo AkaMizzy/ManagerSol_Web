@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Plus, Search, Building2, Users, TrendingUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -6,58 +6,37 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CompanyCard, Company } from "@/components/CompanyCard"
 import { useNavigate } from "react-router-dom"
 
-// Mock data
-const mockCompanies: Company[] = [
-  {
-    id: "1",
-    name: "TechFlow Solutions",
-    description: "Leading software development company specializing in web and mobile applications for enterprise clients.",
-    industry: "Technology",
-    location: "San Francisco, CA",
-    foundedYear: 2018,
-    employeeCount: 45,
-    teamMembers: [
-      { id: "1", name: "Sarah Johnson", role: "CEO", email: "sarah@techflow.com" },
-      { id: "2", name: "Mike Chen", role: "CTO", email: "mike@techflow.com" },
-      { id: "3", name: "Emma Davis", role: "Lead Designer", email: "emma@techflow.com" },
-      { id: "4", name: "Alex Rodriguez", role: "Senior Developer", email: "alex@techflow.com" },
-    ]
-  },
-  {
-    id: "2",
-    name: "GreenEarth Consulting",
-    description: "Environmental consulting firm helping businesses reduce their carbon footprint and implement sustainable practices.",
-    industry: "Environmental",
-    location: "Portland, OR",
-    foundedYear: 2020,
-    employeeCount: 28,
-    teamMembers: [
-      { id: "5", name: "Dr. James Wilson", role: "Founder", email: "james@greenearth.com" },
-      { id: "6", name: "Lisa Park", role: "Operations Manager", email: "lisa@greenearth.com" },
-      { id: "7", name: "Tom Brown", role: "Environmental Analyst", email: "tom@greenearth.com" },
-    ]
-  },
-  {
-    id: "3",
-    name: "DataVision Analytics",
-    description: "Data science and analytics company providing insights and business intelligence solutions for Fortune 500 companies.",
-    industry: "Data & Analytics",
-    location: "Austin, TX",
-    foundedYear: 2019,
-    employeeCount: 67,
-    teamMembers: [
-      { id: "8", name: "Rachel Kim", role: "Data Scientist", email: "rachel@datavision.com" },
-      { id: "9", name: "David Thompson", role: "Product Manager", email: "david@datavision.com" },
-      { id: "10", name: "Maria Garcia", role: "Business Analyst", email: "maria@datavision.com" },
-      { id: "11", name: "John Smith", role: "Engineering Lead", email: "john@datavision.com" },
-    ]
-  }
-]
-
 export default function Dashboard() {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState("")
-  const [companies] = useState<Company[]>(mockCompanies)
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setLoading(true)
+    fetch("http://localhost:5000/companies")
+      .then(res => res.json())
+      .then((data) => {
+        const mapped: Company[] = data.map((c: any) => ({
+          id: c.id?.toString() || String(c.id),
+          name: c.title || "Untitled Company",
+          description: c.description || "",
+          industry: c.sector || "",
+          location: c.location || "",
+          foundedYear: c.foundedYear,
+          employeeCount: c.nb_users || 0,
+          logo: c.logo ? `http://localhost:5000${c.logo}` : undefined,
+          teamMembers: c.teamMembers || [],
+        }))
+        setCompanies(mapped)
+        setLoading(false)
+      })
+      .catch(() => {
+        setError("Failed to fetch companies")
+        setLoading(false)
+      })
+  }, [])
 
   const filteredCompanies = companies.filter(company =>
     company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -66,7 +45,14 @@ export default function Dashboard() {
   )
 
   const totalEmployees = companies.reduce((sum, company) => sum + company.employeeCount, 0)
-  const avgEmployees = Math.round(totalEmployees / companies.length)
+  const avgEmployees = companies.length > 0 ? Math.round(totalEmployees / companies.length) : 0
+
+  if (loading) {
+    return <div className="py-12 text-center text-muted-foreground">Loading dashboard...</div>
+  }
+  if (error) {
+    return <div className="py-12 text-center text-destructive">{error}</div>
+  }
 
   return (
     <div className="space-y-6">
@@ -104,7 +90,6 @@ export default function Dashboard() {
             </p>
           </CardContent>
         </Card>
-        
         <Card className="border border-border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -119,7 +104,6 @@ export default function Dashboard() {
             </p>
           </CardContent>
         </Card>
-        
         <Card className="border border-border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -136,8 +120,6 @@ export default function Dashboard() {
         </Card>
       </div>
 
-
-
       {/* Companies Grid */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -145,7 +127,6 @@ export default function Dashboard() {
             Companies ({filteredCompanies.length})
           </h2>
         </div>
-        
         {filteredCompanies.length === 0 ? (
           <Card className="border border-border">
             <CardContent className="flex flex-col items-center justify-center py-12">
@@ -156,7 +137,7 @@ export default function Dashboard() {
               <CardDescription className="text-center mb-4">
                 {searchQuery ? "Try adjusting your search criteria" : "Get started by creating your first company"}
               </CardDescription>
-              <Button onClick={() => navigate("/create-company")}>
+              <Button onClick={() => navigate("/create-company")}> 
                 <Plus className="mr-2 h-4 w-4" />
                 Add Your First Company
               </Button>

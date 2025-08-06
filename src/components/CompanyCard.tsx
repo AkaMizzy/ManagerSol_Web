@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { useNavigate } from "react-router-dom"
+// import { useNavigate } from "react-router-dom"
 
 export interface Company {
   id: string
@@ -27,17 +27,18 @@ export interface TeamMember {
 
 interface CompanyCardProps {
   company: Company
+  onClick?: () => void
 }
 
-export function CompanyCard({ company }: CompanyCardProps) {
-  const navigate = useNavigate()
+export function CompanyCard({ company, onClick }: CompanyCardProps) {
+  // const navigate = useNavigate()
 
-  const handleViewDetails = () => {
-    navigate(`/companies/${company.id}`)
-  }
+  // const handleViewDetails = () => {
+  //   navigate(`/companies/${company.id}`)
+  // }
 
   return (
-    <Card className="hover:bg-card-hover transition-all duration-200 cursor-pointer group border border-border shadow-sm hover:shadow-md">
+    <Card className="hover:bg-card-hover transition-all duration-200 cursor-pointer group border border-border shadow-sm hover:shadow-md" onClick={onClick}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
@@ -59,12 +60,10 @@ export function CompanyCard({ company }: CompanyCardProps) {
           </div>
         </div>
       </CardHeader>
-      
       <CardContent className="space-y-4">
         <CardDescription className="text-muted-foreground line-clamp-2">
           {company.description}
         </CardDescription>
-        
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1">
@@ -81,7 +80,6 @@ export function CompanyCard({ company }: CompanyCardProps) {
             <span>{company.employeeCount} employees</span>
           </div>
         </div>
-
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <span className="text-sm text-muted-foreground">Team:</span>
@@ -101,15 +99,6 @@ export function CompanyCard({ company }: CompanyCardProps) {
               )}
             </div>
           </div>
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleViewDetails}
-            className="group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200"
-          >
-            View Details
-          </Button>
         </div>
       </CardContent>
     </Card>

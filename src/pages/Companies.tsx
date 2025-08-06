@@ -16,6 +16,10 @@ interface BackendCompany {
   email?: string;
   nb_users?: number;
   status?: string;
+  foundedYear?: number;
+  sector?: string;
+  location?: string;
+  teamMembers?: any[];
 }
 
 export default function Companies() {
@@ -34,16 +38,16 @@ export default function Companies() {
     fetch("http://localhost:5000/companies")
       .then(res => res.json())
       .then((data: BackendCompany[]) => {
-        const mapped = data.map((c) => ({
-          id: c.id?.toString() || c.id,
-          name: c.title || c.name || "Untitled Company",
+        const mapped: Company[] = data.map((c) => ({
+          id: c.id?.toString() || String(c.id),
+          name: c.title || "Untitled Company",
           description: c.description || "",
-          industry: "N/A",
-          location: "N/A",
-          foundedYear: 2020,
+          industry: c.sector || "",
+          location: c.location || "",
+          foundedYear: c.foundedYear || 0,
           employeeCount: c.nb_users || 0,
           logo: c.logo ? `http://localhost:5000${c.logo}` : undefined,
-          teamMembers: [],
+          teamMembers: c.teamMembers || [],
         }))
         setCompanies(mapped)
         setLoading(false)
@@ -67,7 +71,7 @@ export default function Companies() {
         case "employees":
           return b.employeeCount - a.employeeCount
         case "founded":
-          return b.foundedYear - a.foundedYear
+          return a.foundedYear - b.foundedYear
         case "industry":
           return a.industry.localeCompare(b.industry)
         default:
@@ -170,9 +174,7 @@ export default function Companies() {
             : "space-y-4"
           }>
             {filteredAndSortedCompanies.map((company) => (
-              <div key={company.id} onClick={() => { setSelectedCompanyId(company.id); setIsDetailOpen(true); }} style={{ cursor: 'pointer' }}>
-                <CompanyCard company={company} />
-              </div>
+              <CompanyCard key={company.id} company={company} onClick={() => { setSelectedCompanyId(company.id); setIsDetailOpen(true); }} />
             ))}
           </div>
         )}
