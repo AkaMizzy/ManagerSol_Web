@@ -1,4 +1,4 @@
-import { Building2, Users, Plus, Home } from "lucide-react"
+import { Building2, Users, Plus, Home, List, FolderTree } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 
 import {
@@ -18,6 +18,8 @@ const items = [
   { title: "Dashboard", url: "/", icon: Home },
   { title: "Companies", url: "/companies", icon: Building2 },
   { title: "Teams", url: "/teams", icon: Users },
+  { title: "Task Elements", url: "/task-elements", icon: List },
+  { title: "Task Group Models", url: "/task-group-models", icon: FolderTree },
   { title: "Create Company", url: "/create-company", icon: Plus },
 ]
 

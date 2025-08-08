@@ -10,6 +10,8 @@ import CompanyDetail from "./pages/CompanyDetail";
 import CreateCompany from "./pages/CreateCompany";
 import Teams from "./pages/Teams";
 import NotFound from "./pages/NotFound";
+import TaskElements from "./pages/TaskElements";
+import TaskGroupModels from "./pages/TaskGroupModels";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +28,8 @@ const App = () => (
             <Route path="/companies/:id" element={<CompanyDetail />} />
             <Route path="/create-company" element={<CreateCompany />} />
             <Route path="/teams" element={<Teams />} />
+            <Route path="/task-elements" element={<TaskElements />} />
+            <Route path="/task-group-models" element={<TaskGroupModels />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
