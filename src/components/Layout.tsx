@@ -13,8 +13,28 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const navigate = useNavigate()
 
+  let displayName = ""
+  let displayEmail = ""
+  try {
+    const raw = localStorage.getItem('authUser')
+    if (raw) {
+      const u = JSON.parse(raw)
+      const first = (u?.firstname || "").toString().trim()
+      const last = (u?.lastname || "").toString().trim()
+      displayName = [first, last].filter(Boolean).join(" ") || u?.email || "User"
+      displayEmail = u?.email || ""
+    }
+  } catch (e) {
+    // ignore parsing errors, fall back to defaults
+  }
+
   const handleDisconnect = () => {
-    // Clear any stored auth tokens/data here if needed
+    try {
+      localStorage.removeItem('authUser')
+      sessionStorage.removeItem('authUser')
+    } catch (e) {
+      // ignore storage errors
+    }
     navigate("/")
   }
 
@@ -52,8 +72,8 @@ export function Layout({ children }: LayoutProps) {
                   sideOffset={8}
                 >
                   <div className="px-3 py-2 border-b border-border">
-                    <p className="text-sm font-medium text-foreground">John Doe</p>
-                    <p className="text-xs text-muted-foreground">john.doe@managersol.com</p>
+                    <p className="text-sm font-medium text-foreground">{displayName}</p>
+                    <p className="text-xs text-muted-foreground">{displayEmail}</p>
                   </div>
                   
                   <DropdownMenuItem className="cursor-pointer hover:bg-accent">

@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useParams, Navigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Companies from "./pages/Companies";
@@ -21,6 +21,51 @@ const CompanyDetailWrapper = () => {
   return <CompanyDetail companyId={id!} onClose={() => window.history.back()} />;
 };
 
+function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
+  const raw = typeof window !== 'undefined' ? localStorage.getItem('authUser') : null;
+  const auth = raw ? JSON.parse(raw) : null;
+  const token = auth?.token;
+  const role = auth?.role;
+
+  if (!token) return <Navigate to="/" replace />;
+  if (allowedRoles && !allowedRoles.includes(role)) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+function LandingRoute() {
+  const raw = typeof window !== 'undefined' ? localStorage.getItem('authUser') : null;
+  const auth = raw ? JSON.parse(raw) : null;
+  const token = auth?.token;
+  if (token) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <Login />;
+}
+
+function ProtectedApp() {
+  // Synchronously gate the entire app shell to avoid any flash of protected UI
+  const raw = typeof window !== 'undefined' ? localStorage.getItem('authUser') : null;
+  const auth = raw ? JSON.parse(raw) : null;
+  const token = auth?.token;
+  if (!token) return <Navigate to="/" replace />;
+
+  return (
+    <Layout>
+      <Routes>
+        <Route path="/dashboard" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><Dashboard /></ProtectedRoute>} />
+        <Route path="/companies" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><Companies /></ProtectedRoute>} />
+        <Route path="/companies/:id" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><CompanyDetailWrapper /></ProtectedRoute>} />
+        <Route path="/create-company" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><CreateCompany /></ProtectedRoute>} />
+        <Route path="/teams" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><Teams /></ProtectedRoute>} />
+        <Route path="/task-elements" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><TaskElements /></ProtectedRoute>} />
+        <Route path="/task-group-models" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><TaskGroupModels /></ProtectedRoute>} />
+        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Layout>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -28,22 +73,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/*" element={
-            <Layout>
-              <Routes>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/companies" element={<Companies />} />
-                <Route path="/companies/:id" element={<CompanyDetailWrapper />} />
-                <Route path="/create-company" element={<CreateCompany />} />
-                <Route path="/teams" element={<Teams />} />
-                <Route path="/task-elements" element={<TaskElements />} />
-                <Route path="/task-group-models" element={<TaskGroupModels />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Layout>
-          } />
+          <Route path="/" element={<LandingRoute />} />
+          <Route path="/*" element={<ProtectedApp />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

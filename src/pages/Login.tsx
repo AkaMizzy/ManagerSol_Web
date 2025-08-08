@@ -11,29 +11,55 @@ export default function Login() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    
-    // Simulate login process
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    // For demo purposes, always navigate to dashboard
-    navigate("/dashboard")
-    setIsLoading(false)
+    setError(null)
+
+    try {
+      const res = await fetch('http://localhost:5000/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Login failed')
+      }
+      const data = await res.json()
+      const role = data?.role
+      // Persist minimal auth info for routing guard or later use
+      localStorage.setItem('authUser', JSON.stringify({ id: data?.id, email: data?.email, role, token: data?.token, firstname: data?.firstname, lastname: data?.lastname }))
+
+      if (role === 'superAdmin' || role === 'admin') {
+        navigate('/dashboard')
+      } else if (role === 'user') {
+        setError('Your account does not have access to the admin area.')
+      } else {
+        setError('Unauthorized role.')
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Login failed'
+      setError(message)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-accent/5 p-4">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-background via-background to-background p-4">
+      {/* Enhanced gradient mesh + subtle blurred blobs */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 -left-24 h-[28rem] w-[28rem] rounded-full bg-primary/35 blur-3xl animate-pulse" />
+        <div className="absolute top-16 -right-24 h-[24rem] w-[24rem] rounded-full bg-primary/25 blur-3xl animate-pulse" style={{ animationDelay: '0.6s' }} />
+        <div className="absolute bottom-[-2rem] -left-10 h-[26rem] w-[26rem] rounded-full bg-accent/30 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute bottom-8 -right-10 h-[22rem] w-[22rem] rounded-full bg-secondary/30 blur-2xl animate-pulse" style={{ animationDelay: '1.4s' }} />
       </div>
 
-      <div className="relative w-full max-w-md space-y-8">
+      <div className="relative z-10 w-full max-w-md space-y-8">
         {/* Logo and Header */}
         <div className="text-center space-y-6">
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary to-primary/80 rounded-2xl flex items-center justify-center shadow-lg">
@@ -44,7 +70,7 @@ export default function Login() {
               Welcome to ManagerSol
             </h1>
             <p className="text-muted-foreground">
-              Sign in to manage your companies and teams
+              Sign in to manage your companies
             </p>
           </div>
         </div>
@@ -105,6 +131,8 @@ export default function Login() {
                   </div>
                 </div>
               </div>
+
+              {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
               {/* Sign In Button */}
               <Button
