@@ -2,13 +2,22 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/AppSidebar"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Bell, User } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import { Search, Bell, User, LogOut, Settings, UserCircle } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 interface LayoutProps {
   children: React.ReactNode
 }
 
 export function Layout({ children }: LayoutProps) {
+  const navigate = useNavigate()
+
+  const handleDisconnect = () => {
+    // Clear any stored auth tokens/data here if needed
+    navigate("/")
+  }
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
@@ -30,9 +39,44 @@ export function Layout({ children }: LayoutProps) {
               <Button variant="ghost" size="icon" className="h-8 w-8">
                 <Bell className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <User className="h-4 w-4" />
-              </Button>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <User className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent 
+                  align="end" 
+                  className="w-56 bg-popover border border-border shadow-lg z-50"
+                  sideOffset={8}
+                >
+                  <div className="px-3 py-2 border-b border-border">
+                    <p className="text-sm font-medium text-foreground">John Doe</p>
+                    <p className="text-xs text-muted-foreground">john.doe@managersol.com</p>
+                  </div>
+                  
+                  <DropdownMenuItem className="cursor-pointer hover:bg-accent">
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem className="cursor-pointer hover:bg-accent">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator className="bg-border" />
+                  
+                  <DropdownMenuItem 
+                    className="cursor-pointer hover:bg-destructive/10 text-destructive focus:text-destructive"
+                    onClick={handleDisconnect}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Disconnect</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </header>
           <div className="flex-1 p-6">
