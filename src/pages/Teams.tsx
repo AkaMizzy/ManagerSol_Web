@@ -22,11 +22,13 @@ interface BackendUser {
   status?: string;
   role?: string;
   company_id: string;
+  password?: string;
 }
 interface BackendCompany {
   id: string;
   title: string;
   sector?: string;
+  email?: string;
 }
 interface TeamMember {
   id: string;
@@ -54,10 +56,10 @@ export default function Teams() {
     identifier: "",
     phone1: "",
     phone2: "",
-    password: "",
     status: "",
     role: "user",
-    company_id: ""
+    company_id: "",
+    password: ""
   })
   const [isCreating, setIsCreating] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
