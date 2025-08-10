@@ -4,14 +4,15 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useParams, Navigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
-import Dashboard from "./pages/Dashboard";
-import Companies from "./pages/Companies";
-import CompanyDetail from "./pages/CompanyDetail";
-import CreateCompany from "./pages/CreateCompany";
-import Teams from "./pages/Teams";
+import SuperAdminDashboard from "./pages/SuperAdmin/AdminDashboard";
+import AdminDashboard from "./pages/Admin/SuperAdminDashboard";
+import Companies from "./pages/SuperAdmin/company/Companies";
+import CompanyDetail from "./pages/SuperAdmin/company/CompanyDetail";
+import CreateCompany from "./pages/SuperAdmin/company/CreateCompany";
+import User from "./pages/Admin/users/Users";
 import NotFound from "./pages/NotFound";
-import TaskElements from "./pages/TaskElements";
-import TaskGroupModels from "./pages/TaskGroupModels";
+import TaskElements from "./pages/Admin/task_management/TaskElements";
+import TaskGroupModels from "./pages/Admin/task_management/TaskGroupModels";
 import Login from "./pages/Login";
 
 const queryClient = new QueryClient();
@@ -28,7 +29,7 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode;
   const role = auth?.role;
 
   if (!token) return <Navigate to="/" replace />;
-  if (allowedRoles && !allowedRoles.includes(role)) return <Navigate to="/" replace />;
+  if (allowedRoles && !allowedRoles.includes(role)) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
 
@@ -52,11 +53,19 @@ function ProtectedApp() {
   return (
     <Layout>
       <Routes>
-        <Route path="/dashboard" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><Dashboard /></ProtectedRoute>} />
-        <Route path="/companies" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><Companies /></ProtectedRoute>} />
-        <Route path="/companies/:id" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><CompanyDetailWrapper /></ProtectedRoute>} />
-        <Route path="/create-company" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><CreateCompany /></ProtectedRoute>} />
-        <Route path="/teams" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><Teams /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}>{
+          (() => {
+            const raw = typeof window !== 'undefined' ? localStorage.getItem('authUser') : null;
+            const auth = raw ? JSON.parse(raw) : null;
+            const role = auth?.role;
+            if (role === 'superAdmin') return <SuperAdminDashboard />;
+            if (role === 'admin') return <AdminDashboard />;
+          })()
+        }</ProtectedRoute>} />
+        <Route path="/companies" element={<ProtectedRoute allowedRoles={["superAdmin"]}><Companies /></ProtectedRoute>} />
+        <Route path="/companies/:id" element={<ProtectedRoute allowedRoles={["superAdmin"]}><CompanyDetailWrapper /></ProtectedRoute>} />
+        <Route path="/create-company" element={<ProtectedRoute allowedRoles={["superAdmin"]}><CreateCompany /></ProtectedRoute>} />
+        <Route path="/users" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><User /></ProtectedRoute>} />
         <Route path="/task-elements" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><TaskElements /></ProtectedRoute>} />
         <Route path="/task-group-models" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><TaskGroupModels /></ProtectedRoute>} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
