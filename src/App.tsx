@@ -4,8 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useParams, Navigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
-import SuperAdminDashboard from "./pages/SuperAdmin/AdminDashboard";
-import AdminDashboard from "./pages/Admin/SuperAdminDashboard";
+import SuperAdminDashboard from "./pages/SuperAdmin/SuperAdminDashboard";
+import AdminDashboard from "./pages/Admin/AdminDashboard";
 import Companies from "./pages/SuperAdmin/company/Companies";
 import CompanyDetail from "./pages/SuperAdmin/company/CompanyDetail";
 import CreateCompany from "./pages/SuperAdmin/company/CreateCompany";
@@ -13,6 +13,7 @@ import User from "./pages/Admin/users/Users";
 import NotFound from "./pages/NotFound";
 import TaskElements from "./pages/Admin/task_management/TaskElements";
 import TaskGroupModels from "./pages/Admin/task_management/TaskGroupModels";
+import TaskGroupElementBoard from "./pages/Admin/task_management/TaskGroupElementBoard";
 import Login from "./pages/Login";
 
 const queryClient = new QueryClient();
@@ -68,6 +69,7 @@ function ProtectedApp() {
         <Route path="/users" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><User /></ProtectedRoute>} />
         <Route path="/task-elements" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><TaskElements /></ProtectedRoute>} />
         <Route path="/task-group-models" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><TaskGroupModels /></ProtectedRoute>} />
+        <Route path="/task-group-elements" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><TaskGroupElementBoard /></ProtectedRoute>} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
