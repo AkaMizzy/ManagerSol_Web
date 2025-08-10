@@ -40,7 +40,7 @@ export default function Dashboard() {
 
   const filteredCompanies = companies.filter(company =>
     company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    company.industry.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (company.industry || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     company.location.toLowerCase().includes(searchQuery.toLowerCase())
   )
 

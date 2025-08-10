@@ -7,6 +7,7 @@ export interface Company {
   id: string
   name: string
   description: string
+  industry: string
   location: string
   foundedYear: number
   employeeCount: number

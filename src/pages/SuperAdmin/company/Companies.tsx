@@ -42,6 +42,7 @@ export default function Companies() {
           id: c.id?.toString() || String(c.id),
           name: c.title || "Untitled Company",
           description: c.description || "",
+          industry: c.sector || "",
           location: c.location || "",
           foundedYear: c.foundedYear || 0,
           employeeCount: c.nb_users || 0,

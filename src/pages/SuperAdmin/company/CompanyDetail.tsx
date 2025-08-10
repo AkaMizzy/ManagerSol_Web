@@ -73,6 +73,7 @@ export default function CompanyDetail({ companyId, onClose }: CompanyDetailProps
           id: data.id?.toString() || data.id,
           name: data.title || data.name || "Untitled Company",
           description: data.description || "",
+          industry: data.sector || "",
           location: data.location || "",
           foundedYear: data.foundedYear,
           employeeCount: data.nb_users || 0,
@@ -433,126 +434,356 @@ export default function CompanyDetail({ companyId, onClose }: CompanyDetailProps
           </div>
       {/* You can add more tab content for 'team' and 'details' as needed */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="w-[95vw] max-w-5xl md:max-w-6xl min-h-[50vh] max-h-[90vh] overflow-hidden">
-          <form className="space-y-6" encType="multipart/form-data">
-            <div className="border border-border rounded-lg p-6 bg-card max-h-[78vh] overflow-y-auto">
-              <Tabs value={editTab} onValueChange={(v) => setEditTab(v as 'info' | 'bank')}>
-                <TabsList className="mb-4">
-                  <TabsTrigger value="info">Info & Sector</TabsTrigger>
-                  <TabsTrigger value="bank">Banking</TabsTrigger>
-                </TabsList>
-                <TabsContent value="info" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Company Title *</Label>
-                      <Input id="title" value={editForm?.title || ""} onChange={(e) => handleEditInputChange("title", e.target.value)} placeholder="Enter company title" className="border-border focus:ring-primary" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Contact Email *</Label>
-                      <Input id="email" type="email" value={editForm?.email || ""} onChange={(e) => handleEditInputChange("email", e.target.value)} placeholder="contact@company.com" className="border-border focus:ring-primary" required />
-                </div>
+        <DialogContent className="w-[95vw] max-w-6xl min-h-[60vh] max-h-[90vh] overflow-hidden p-0">
+          <div className="relative bg-gradient-to-br from-background via-card to-muted/20 h-full">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 pointer-events-none" />
+            <div className="relative p-8">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-foreground mb-2">Update Company</h2>
+                <p className="text-muted-foreground">Modify company information and banking details</p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                    <Textarea id="description" value={editForm?.description || ""} onChange={(e) => handleEditInputChange("description", e.target.value)} placeholder="Describe what the company does..." className="min-h-[100px] border-border focus:ring-primary" rows={4} />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nb_users">Number of Users</Label>
-                      <Input id="nb_users" type="number" value={editForm?.nb_users || 1} onChange={(e) => handleEditInputChange("nb_users", parseInt(e.target.value))} className="border-border focus:ring-primary" min="1" />
+              
+              <form className="space-y-6" encType="multipart/form-data">
+                <div className="max-h-[65vh] overflow-y-auto custom-scrollbar">
+                  <Tabs value={editTab} onValueChange={(v) => setEditTab(v as 'info' | 'bank')}>
+                    <TabsList className="grid w-full grid-cols-2 mb-8 bg-muted/50 p-1 rounded-xl">
+                      <TabsTrigger 
+                        value="info" 
+                        className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground font-medium transition-all duration-200"
+                      >
+                        Company Information
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="bank" 
+                        className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground font-medium transition-all duration-200"
+                      >
+                        Banking & Legal
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="info" className="space-y-8 mt-0">
+                      {/* Basic Information Card */}
+                      <Card className="border-0 shadow-md bg-background/60 backdrop-blur-sm">
+                        <CardHeader className="pb-4">
+                          <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                            <Building2 className="h-5 w-5 text-primary" />
+                            Basic Information
+                          </CardTitle>
+                          <CardDescription>Essential company details and contact information</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-3">
+                              <Label htmlFor="title" className="text-sm font-medium text-foreground">Company Title *</Label>
+                              <Input 
+                                id="title" 
+                                value={editForm?.title || ""} 
+                                onChange={(e) => handleEditInputChange("title", e.target.value)} 
+                                placeholder="Enter company title" 
+                                className="h-11 border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80" 
+                                required 
+                              />
+                            </div>
+                            <div className="space-y-3">
+                              <Label htmlFor="email" className="text-sm font-medium text-foreground">Contact Email *</Label>
+                              <Input 
+                                id="email" 
+                                type="email" 
+                                value={editForm?.email || ""} 
+                                onChange={(e) => handleEditInputChange("email", e.target.value)} 
+                                placeholder="contact@company.com" 
+                                className="h-11 border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80" 
+                                required 
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-3">
+                            <Label htmlFor="description" className="text-sm font-medium text-foreground">Description</Label>
+                            <Textarea 
+                              id="description" 
+                              value={editForm?.description || ""} 
+                              onChange={(e) => handleEditInputChange("description", e.target.value)} 
+                              placeholder="Describe what the company does..." 
+                              className="min-h-[120px] border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80 resize-none" 
+                              rows={5} 
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="space-y-3">
+                              <Label htmlFor="nb_users" className="text-sm font-medium text-foreground">Number of Users</Label>
+                              <Input 
+                                id="nb_users" 
+                                type="number" 
+                                value={editForm?.nb_users || 1} 
+                                onChange={(e) => handleEditInputChange("nb_users", parseInt(e.target.value))} 
+                                className="h-11 border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80" 
+                                min="1" 
+                              />
+                            </div>
+                            <div className="space-y-3">
+                              <Label htmlFor="status" className="text-sm font-medium text-foreground">Status</Label>
+                              <Input 
+                                id="status" 
+                                value={editForm?.status || ""} 
+                                onChange={(e) => handleEditInputChange("status", e.target.value)} 
+                                className="h-11 border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80" 
+                              />
+                            </div>
+                            <div className="space-y-3">
+                              <Label htmlFor="foundedYear" className="text-sm font-medium text-foreground">Founded Year</Label>
+                              <Input 
+                                id="foundedYear" 
+                                type="number" 
+                                value={editForm?.foundedYear || new Date().getFullYear()} 
+                                onChange={(e) => handleEditInputChange("foundedYear", parseInt(e.target.value))} 
+                                className="h-11 border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80" 
+                                min="1800" 
+                                max={new Date().getFullYear()} 
+                              />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Contact Information Card */}
+                      <Card className="border-0 shadow-md bg-background/60 backdrop-blur-sm">
+                        <CardHeader className="pb-4">
+                          <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                            <Mail className="h-5 w-5 text-primary" />
+                            Contact Information
+                          </CardTitle>
+                          <CardDescription>Phone numbers, website, and additional contact details</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-3">
+                              <Label htmlFor="sector_phone1" className="text-sm font-medium text-foreground">Primary Phone</Label>
+                              <Input 
+                                id="sector_phone1" 
+                                value={editForm?.sector_phone1 || ''} 
+                                onChange={(e) => handleEditInputChange('sector_phone1', e.target.value)} 
+                                className="h-11 border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80" 
+                                placeholder="+1 (555) 000-0000"
+                              />
+                            </div>
+                            <div className="space-y-3">
+                              <Label htmlFor="sector_phone2" className="text-sm font-medium text-foreground">Secondary Phone</Label>
+                              <Input 
+                                id="sector_phone2" 
+                                value={editForm?.sector_phone2 || ''} 
+                                onChange={(e) => handleEditInputChange('sector_phone2', e.target.value)} 
+                                className="h-11 border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80" 
+                                placeholder="+1 (555) 000-0001"
+                              />
+                            </div>
+                            <div className="space-y-3">
+                              <Label htmlFor="sector_website" className="text-sm font-medium text-foreground">Website</Label>
+                              <Input 
+                                id="sector_website" 
+                                type="url" 
+                                value={editForm?.sector_website || ''} 
+                                onChange={(e) => handleEditInputChange('sector_website', e.target.value)} 
+                                className="h-11 border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80" 
+                                placeholder="https://company.com"
+                              />
+                            </div>
+                            <div className="space-y-3">
+                              <Label htmlFor="sector_email2" className="text-sm font-medium text-foreground">Secondary Email</Label>
+                              <Input 
+                                id="sector_email2" 
+                                type="email" 
+                                value={editForm?.sector_email2 || ''} 
+                                onChange={(e) => handleEditInputChange('sector_email2', e.target.value)} 
+                                className="h-11 border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80" 
+                                placeholder="support@company.com"
+                              />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Logo Upload Card */}
+                      <Card className="border-0 shadow-md bg-background/60 backdrop-blur-sm">
+                        <CardHeader className="pb-4">
+                          <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                            <Building2 className="h-5 w-5 text-primary" />
+                            Company Logo
+                          </CardTitle>
+                          <CardDescription>Upload your company logo (PNG, JPG, or SVG format)</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <Label htmlFor="logo" className="text-sm font-medium text-foreground">Company Logo</Label>
+                            <Input 
+                              id="logo" 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={handleEditLogoChange} 
+                              className="h-11 border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary-hover file:cursor-pointer" 
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+                    <TabsContent value="bank" className="space-y-8 mt-0">
+                      {/* Banking Information Card */}
+                      <Card className="border-0 shadow-md bg-background/60 backdrop-blur-sm">
+                        <CardHeader className="pb-4">
+                          <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                            <CreditCard className="h-5 w-5 text-primary" />
+                            Banking Information
+                          </CardTitle>
+                          <CardDescription>Bank details and financial information</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-3">
+                              <Label htmlFor="bank_name" className="text-sm font-medium text-foreground">Bank Name</Label>
+                              <Input 
+                                id="bank_name" 
+                                value={editForm?.bank_name || ''} 
+                                onChange={(e) => handleEditInputChange('bank_name', e.target.value)} 
+                                className="h-11 border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80" 
+                                placeholder="Bank of Commerce"
+                              />
+                            </div>
+                            <div className="space-y-3">
+                              <Label htmlFor="rib_number" className="text-sm font-medium text-foreground">RIB Number</Label>
+                              <Input 
+                                id="rib_number" 
+                                value={editForm?.rib_number || ''} 
+                                onChange={(e) => handleEditInputChange('rib_number', e.target.value)} 
+                                className="h-11 border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80" 
+                                placeholder="0000 0000 0000 0000"
+                              />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Legal Information Card */}
+                      <Card className="border-0 shadow-md bg-background/60 backdrop-blur-sm">
+                        <CardHeader className="pb-4">
+                          <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                            <Shield className="h-5 w-5 text-primary" />
+                            Legal Information
+                          </CardTitle>
+                          <CardDescription>Registration numbers and legal identifiers</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="space-y-3">
+                              <Label htmlFor="rc_number" className="text-sm font-medium text-foreground">RC Number</Label>
+                              <Input 
+                                id="rc_number" 
+                                value={editForm?.rc_number || ''} 
+                                onChange={(e) => handleEditInputChange('rc_number', e.target.value)} 
+                                className="h-11 border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80" 
+                                placeholder="RC123456"
+                              />
+                            </div>
+                            <div className="space-y-3">
+                              <Label htmlFor="if_number" className="text-sm font-medium text-foreground">IF Number</Label>
+                              <Input 
+                                id="if_number" 
+                                value={editForm?.if_number || ''} 
+                                onChange={(e) => handleEditInputChange('if_number', e.target.value)} 
+                                className="h-11 border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80" 
+                                placeholder="IF123456"
+                              />
+                            </div>
+                            <div className="space-y-3">
+                              <Label htmlFor="cnss_number" className="text-sm font-medium text-foreground">CNSS Number</Label>
+                              <Input 
+                                id="cnss_number" 
+                                value={editForm?.cnss_number || ''} 
+                                onChange={(e) => handleEditInputChange('cnss_number', e.target.value)} 
+                                className="h-11 border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80" 
+                                placeholder="CNSS123456"
+                              />
+                            </div>
+                            <div className="space-y-3">
+                              <Label htmlFor="patente_number" className="text-sm font-medium text-foreground">Patente Number</Label>
+                              <Input 
+                                id="patente_number" 
+                                value={editForm?.patente_number || ''} 
+                                onChange={(e) => handleEditInputChange('patente_number', e.target.value)} 
+                                className="h-11 border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80" 
+                                placeholder="PAT123456"
+                              />
+                            </div>
+                            <div className="space-y-3">
+                              <Label htmlFor="ice_number" className="text-sm font-medium text-foreground">ICE Number</Label>
+                              <Input 
+                                id="ice_number" 
+                                value={editForm?.ice_number || ''} 
+                                onChange={(e) => handleEditInputChange('ice_number', e.target.value)} 
+                                className="h-11 border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80" 
+                                placeholder="ICE123456789"
+                              />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Document Upload Card */}
+                      <Card className="border-0 shadow-md bg-background/60 backdrop-blur-sm">
+                        <CardHeader className="pb-4">
+                          <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-primary" />
+                            Document Upload
+                          </CardTitle>
+                          <CardDescription>Upload bank statements and other financial documents</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <Label htmlFor="bank_releve" className="text-sm font-medium text-foreground">Bank Statement (Relevé)</Label>
+                            <Input 
+                              id="bank_releve" 
+                              type="file" 
+                              accept="image/*,application/pdf" 
+                              onChange={(e) => handleEditBankReleveChange(e)} 
+                              className="h-11 border-border focus:ring-primary focus:border-primary transition-all duration-200 bg-background/80 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary-hover file:cursor-pointer" 
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+                  </Tabs>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                      <Input id="status" value={editForm?.status || ""} onChange={(e) => handleEditInputChange("status", e.target.value)} className="border-border focus:ring-primary" />
+
+                {/* Action Buttons */}
+                <div className="flex items-center justify-between pt-6 border-t border-border/50">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setEditOpen(false)} 
+                    disabled={isUpdating}
+                    className="px-6 h-11 border-border hover:bg-muted/50 transition-all duration-200"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={isUpdating}
+                    className="px-8 h-11 bg-gradient-to-r from-primary to-primary-hover hover:from-primary-hover hover:to-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                    onClick={handleEditSubmit}
+                  >
+                    {isUpdating ? (
+                      <>
+                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        Updating Company...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Update Company
+                      </>
+                    )}
+                  </Button>
                 </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="foundedYear">Founded Year</Label>
-                      <Input id="foundedYear" type="number" value={editForm?.foundedYear || new Date().getFullYear()} onChange={(e) => handleEditInputChange("foundedYear", parseInt(e.target.value))} className="border-border focus:ring-primary" min="1800" max={new Date().getFullYear()} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="sector_phone1">Phone</Label>
-                      <Input id="sector_phone1" value={editForm?.sector_phone1 || ''} onChange={(e) => handleEditInputChange('sector_phone1', e.target.value)} className="border-border focus:ring-primary" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="sector_phone2">Second Phone</Label>
-                      <Input id="sector_phone2" value={editForm?.sector_phone2 || ''} onChange={(e) => handleEditInputChange('sector_phone2', e.target.value)} className="border-border focus:ring-primary" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="sector_website">Website</Label>
-                      <Input id="sector_website" type="url" value={editForm?.sector_website || ''} onChange={(e) => handleEditInputChange('sector_website', e.target.value)} className="border-border focus:ring-primary" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="sector_email2">Secondary Email</Label>
-                      <Input id="sector_email2" type="email" value={editForm?.sector_email2 || ''} onChange={(e) => handleEditInputChange('sector_email2', e.target.value)} className="border-border focus:ring-primary" />
-                </div>
-                <div className="space-y-2">
-                      <Label htmlFor="logo">Company Logo</Label>
-                      <Input id="logo" type="file" accept="image/*" onChange={handleEditLogoChange} className="border-border focus:ring-primary" />
-                    </div>
-                  </div>
-                </TabsContent>
-                <TabsContent value="bank" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="bank_name">Bank</Label>
-                      <Input id="bank_name" value={editForm?.bank_name || ''} onChange={(e) => handleEditInputChange('bank_name', e.target.value)} className="border-border focus:ring-primary" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="rib_number">RIB</Label>
-                      <Input id="rib_number" value={editForm?.rib_number || ''} onChange={(e) => handleEditInputChange('rib_number', e.target.value)} className="border-border focus:ring-primary" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="rc_number">RC</Label>
-                      <Input id="rc_number" value={editForm?.rc_number || ''} onChange={(e) => handleEditInputChange('rc_number', e.target.value)} className="border-border focus:ring-primary" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="if_number">IF</Label>
-                      <Input id="if_number" value={editForm?.if_number || ''} onChange={(e) => handleEditInputChange('if_number', e.target.value)} className="border-border focus:ring-primary" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cnss_number">CNSS</Label>
-                      <Input id="cnss_number" value={editForm?.cnss_number || ''} onChange={(e) => handleEditInputChange('cnss_number', e.target.value)} className="border-border focus:ring-primary" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="patente_number">Patente</Label>
-                      <Input id="patente_number" value={editForm?.patente_number || ''} onChange={(e) => handleEditInputChange('patente_number', e.target.value)} className="border-border focus:ring-primary" />
-                </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="ice_number">ICE</Label>
-                      <Input id="ice_number" value={editForm?.ice_number || ''} onChange={(e) => handleEditInputChange('ice_number', e.target.value)} className="border-border focus:ring-primary" />
-              </div>
-              <div className="space-y-2">
-                      <Label htmlFor="bank_releve">Bank Statement (Relevé)</Label>
-                      <Input id="bank_releve" type="file" accept="image/*,application/pdf" onChange={(e) => handleEditBankReleveChange(e)} className="border-border focus:ring-primary" />
-                    </div>
-              </div>
-                </TabsContent>
-              </Tabs>
+              </form>
             </div>
-            <div className="flex items-center space-x-4">
-              <Button
-                type="button"
-                disabled={isUpdating}
-                className="bg-primary hover:bg-primary-hover text-primary-foreground"
-                onClick={handleEditSubmit}
-              >
-                {isUpdating ? (
-                  <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Updating...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Update
-                  </>
-                )}
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => setEditOpen(false)} disabled={isUpdating}>Close</Button>
-            </div>
-          </form>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
