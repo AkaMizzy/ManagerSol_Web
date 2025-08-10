@@ -14,6 +14,7 @@ interface TaskGroupModel {
   id: string
   title: string
   domain?: string | null
+  domain_id?: string | null
   description?: string | null
 }
 
@@ -29,7 +30,7 @@ function FormSection({ title, desc, children, className }: PropsWithChildren<{ t
   )
 }
 
-function InputWithIcon({ icon: Icon, className, ...props }: React.ComponentProps<'input'> & { icon: React.ComponentType<any> }) {
+function InputWithIcon({ icon: Icon, className, ...props }: React.ComponentProps<'input'> & { icon: React.ComponentType<{ className?: string }> }) {
   return (
     <div className="relative">
       <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -61,7 +62,8 @@ export default function TaskGroupModels() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [draft, setDraft] = useState<Partial<TaskGroupModel>>({ title: "", domain: "", description: "" })
+  const [draft, setDraft] = useState<Partial<TaskGroupModel>>({ title: "", domain: "", domain_id: "", description: "" })
+  const [domainList, setDomainList] = useState<Array<{ id: string; name: string }>>([])
 
   const fetchModels = () => {
     setLoading(true)
@@ -73,23 +75,55 @@ export default function TaskGroupModels() {
 
   useEffect(() => { fetchModels() }, [])
 
+  useEffect(() => {
+    // Load available domains for selection
+    fetch('http://localhost:5000/domains')
+      .then(res => res.json())
+      .then((rows: Array<{ id: string | number; title?: string }>) => {
+        const mapped = (rows || []).map((r) => ({ id: String(r.id), name: r.title || 'Unnamed' }))
+        setDomainList(mapped)
+      })
+      .catch(() => setDomainList([]))
+  }, [])
+
+  const getDomainNameById = (id?: string | null): string => {
+    if (!id) return ''
+    const found = domainList.find(d => d.id === String(id))
+    return found ? found.name : ''
+  }
+
   const domains = useMemo(() => {
-    const set = new Set<string>()
-    models.forEach(m => { if (m.domain) set.add(m.domain) })
-    return Array.from(set).sort()
-  }, [models])
+    // Prefer domain names from domain list for filtering options; fallback to names present on models
+    const names = new Set<string>()
+    domainList.forEach(d => names.add(d.name))
+    if (names.size === 0) {
+      models.forEach(m => { if (m.domain) names.add(m.domain) })
+    }
+    return Array.from(names).sort()
+  }, [models, domainList])
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
     return models.filter(m => {
-      const matchesQuery = m.title.toLowerCase().includes(q) || (m.description || "").toLowerCase().includes(q) || (m.domain || "").toLowerCase().includes(q)
-      const matchesDomain = domainFilter === "all" || (m.domain || "") === domainFilter
+      const domainName = m.domain || getDomainNameById(m.domain_id)
+      const matchesQuery = m.title.toLowerCase().includes(q) || (m.description || "").toLowerCase().includes(q) || (domainName || "").toLowerCase().includes(q)
+      const matchesDomain = domainFilter === "all" || domainName === domainFilter
       return matchesQuery && matchesDomain
     })
-  }, [models, search, domainFilter])
+  }, [models, search, domainFilter, domainList, getDomainNameById])
 
-  const openCreate = () => { setDraft({ title: "", domain: "", description: "" }); setCreateOpen(true) }
-  const openEdit = (m: TaskGroupModel) => { setSelectedId(m.id); setDraft({ ...m }); setEditOpen(true) }
+  const openCreate = () => { setDraft({ title: "", domain: "", domain_id: domainList[0]?.id || "", description: "" }); setCreateOpen(true) }
+  const openEdit = (m: TaskGroupModel) => {
+    const domainName = m.domain
+    let matchedId: string | undefined = m.domain_id || undefined
+    if (!matchedId && domainName) {
+      const found = domainList.find(d => d.name === domainName)
+      if (found) matchedId = found.id
+    }
+    setSelectedId(m.id)
+    setDraft({ ...m, domain_id: matchedId || '' })
+    setEditOpen(true)
+  }
   const openDelete = (id: string) => { setSelectedId(id); setDeleteOpen(true) }
 
   const submitCreate = async (e: React.FormEvent) => {
@@ -97,9 +131,10 @@ export default function TaskGroupModels() {
     if (!draft.title) { toast({ title: 'Validation', description: 'Title is required', variant: 'destructive' }); return }
     setSubmitting(true)
     try {
+      const payload = { title: draft.title, domain_id: draft.domain_id || null, description: draft.description }
       const res = await fetch('http://localhost:5000/task-group-models', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(draft)
+        body: JSON.stringify(payload)
       })
       if (!res.ok) throw new Error('Create failed')
       toast({ title: 'Created', description: 'Task group model created' })
@@ -115,9 +150,10 @@ export default function TaskGroupModels() {
     if (!selectedId) return
     setSubmitting(true)
     try {
+      const payload = { title: draft.title, domain_id: draft.domain_id || null, description: draft.description }
       const res = await fetch(`http://localhost:5000/task-group-models/${selectedId}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(draft)
+        body: JSON.stringify(payload)
       })
       if (!res.ok) throw new Error('Update failed')
       toast({ title: 'Updated', description: 'Task group model updated' })
@@ -213,7 +249,7 @@ export default function TaskGroupModels() {
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2"><FolderTree className="h-4 w-4 text-muted-foreground" />{m.title}</div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{m.domain || '-'}</TableCell>
+                    <TableCell className="text-muted-foreground">{m.domain || getDomainNameById(m.domain_id) || '-'}</TableCell>
                     <TableCell className="text-muted-foreground max-w-[420px] truncate">{m.description || '-'}</TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button variant="outline" size="sm" onClick={() => openEdit(m)}>
@@ -250,12 +286,16 @@ export default function TaskGroupModels() {
 
                 <div className="space-y-1.5">
                   <Label>Domain <span className="text-xs text-muted-foreground">(optional)</span></Label>
-                  <InputWithIcon
-                    icon={Tag}
-                    value={draft.domain as string}
-                    onChange={(e) => setDraft({ ...draft, domain: e.target.value })}
-                    placeholder="e.g. Safety, HR, Finance"
-                  />
+                  <Select value={(draft.domain_id as string) || ''} onValueChange={(v) => setDraft({ ...draft, domain_id: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a domain" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {domainList.map(d => (
+                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </FormSection>
@@ -295,7 +335,16 @@ export default function TaskGroupModels() {
               </div>
               <div className="space-y-1">
                 <Label>Domain <span className="text-xs text-muted-foreground">(optional)</span></Label>
-                <Input value={draft.domain as string} onChange={(e) => setDraft({ ...draft, domain: e.target.value })} />
+                <Select value={(draft.domain_id as string) || ''} onValueChange={(v) => setDraft({ ...draft, domain_id: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a domain" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {domainList.map(d => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1 md:col-span-2">
                 <Label>Description <span className="text-xs text-muted-foreground">(optional)</span></Label>

@@ -28,6 +28,7 @@ interface TaskElement {
   description?: string
   type: string
   mask?: string
+  unite_mesure_id?: string | null
 }
 
 function FormSection({ title, desc, children, className }: PropsWithChildren<{ title: string; desc?: string; className?: string }>) {
@@ -71,6 +72,7 @@ export default function TaskElements() {
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   const [draft, setDraft] = useState<Partial<TaskElement>>({ title: "", description: "", type: "text", mask: "" })
+  const [unites, setUnites] = useState<Array<{ id: string; title: string }>>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -84,6 +86,18 @@ export default function TaskElements() {
   }
 
   useEffect(() => { fetchElements() }, [typeFilter])
+  useEffect(() => {
+    fetch('http://localhost:5000/unite-mesures')
+      .then(res => res.json())
+      .then((rows: Array<{ id: string | number; title: string }>) => setUnites(rows.map(r => ({ id: String(r.id), title: r.title }))))
+      .catch(() => setUnites([]))
+  }, [])
+
+  const getUnitTitleById = (id?: string | null): string => {
+    if (!id) return ''
+    const u = unites.find(x => x.id === String(id))
+    return u ? u.title : ''
+  }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -118,9 +132,10 @@ export default function TaskElements() {
     }
     setSubmitting(true)
     try {
+      const payload = { title: draft.title, description: draft.description, type: draft.type, mask: draft.mask, unite_mesure_id: draft.unite_mesure_id || null }
       const res = await fetch('http://localhost:5000/task-elements', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(draft)
+        body: JSON.stringify(payload)
       })
       if (!res.ok) throw new Error('Create failed')
       toast({ title: 'Created', description: 'Task element has been created' })
@@ -136,9 +151,10 @@ export default function TaskElements() {
     if (!selectedId) return
     setSubmitting(true)
     try {
+      const payload = { title: draft.title, description: draft.description, type: draft.type, mask: draft.mask, unite_mesure_id: draft.unite_mesure_id || null }
       const res = await fetch(`http://localhost:5000/task-elements/${selectedId}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(draft)
+        body: JSON.stringify(payload)
       })
       if (!res.ok) throw new Error('Update failed')
       toast({ title: 'Updated', description: 'Task element has been updated' })
@@ -228,7 +244,7 @@ export default function TaskElements() {
                   <TableHead>Title</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Mask</TableHead>
+                  <TableHead>Unit of measure</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -238,7 +254,7 @@ export default function TaskElements() {
                     <TableCell className="font-medium">{el.title}</TableCell>
                     <TableCell className="capitalize">{getTypeLabel(el.type)}</TableCell>
                     <TableCell className="text-muted-foreground max-w-[420px] truncate">{el.description}</TableCell>
-                    <TableCell className="text-muted-foreground">{el.mask}</TableCell>
+                    <TableCell className="text-muted-foreground">{getUnitTitleById(el.unite_mesure_id) || '-'}</TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button variant="outline" size="sm" onClick={() => openEdit(el)}>
                         <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
@@ -289,6 +305,20 @@ export default function TaskElements() {
                     </Select>
                   </div>
                  
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Unit of measure <span className="text-xs text-muted-foreground">(optional)</span></Label>
+                  <Select value={(draft.unite_mesure_id as string) || ''} onValueChange={(v) => setDraft({ ...draft, unite_mesure_id: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select unit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {unites.map(u => (
+                        <SelectItem key={u.id} value={u.id}>{u.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 
                 <div className="space-y-1.5">
@@ -352,6 +382,17 @@ export default function TaskElements() {
               <div className="space-y-1 md:col-span-2">
                 <Label>Description <span className="text-xs text-muted-foreground">(optional)</span></Label>
                 <Input value={draft.description as string} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
+              </div>
+              <div className="space-y-1 md:col-span-2">
+                <Label>Unit of measure <span className="text-xs text-muted-foreground">(optional)</span></Label>
+                <Select value={(draft.unite_mesure_id as string) || ''} onValueChange={(v) => setDraft({ ...draft, unite_mesure_id: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select unit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unites.map(u => (<SelectItem key={u.id} value={u.id}>{u.title}</SelectItem>))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1 md:col-span-2">
                 <Label>Mask <span className="text-xs text-muted-foreground">(optional)</span></Label>
