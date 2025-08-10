@@ -42,7 +42,6 @@ export default function Companies() {
           id: c.id?.toString() || String(c.id),
           name: c.title || "Untitled Company",
           description: c.description || "",
-          industry: c.sector || "",
           location: c.location || "",
           foundedYear: c.foundedYear || 0,
           employeeCount: c.nb_users || 0,
@@ -61,7 +60,6 @@ export default function Companies() {
   const filteredAndSortedCompanies = companies
     .filter(company =>
       company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      company.industry.toLowerCase().includes(searchQuery.toLowerCase()) ||
       company.location.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .sort((a, b) => {
@@ -72,8 +70,7 @@ export default function Companies() {
           return b.employeeCount - a.employeeCount
         case "founded":
           return a.foundedYear - b.foundedYear
-        case "industry":
-          return a.industry.localeCompare(b.industry)
+        
         default:
           return 0
       }

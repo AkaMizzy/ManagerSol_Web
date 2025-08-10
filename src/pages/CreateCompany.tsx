@@ -155,7 +155,6 @@ export default function CreateCompany() {
       <div className="flex items-center space-x-4">
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
         </Button>
         <div>
           <h1 className="text-3xl font-bold text-foreground">Create New Company</h1>

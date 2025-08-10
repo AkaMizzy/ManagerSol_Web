@@ -1,6 +1,5 @@
 import { Building2, Users, MapPin, Calendar } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 // import { useNavigate } from "react-router-dom"
 
@@ -8,7 +7,6 @@ export interface Company {
   id: string
   name: string
   description: string
-  industry: string
   location: string
   foundedYear: number
   employeeCount: number
@@ -52,11 +50,6 @@ export function CompanyCard({ company, onClick }: CompanyCardProps) {
               <CardTitle className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
                 {company.name}
               </CardTitle>
-              {company.industry ? (
-                <Badge variant="secondary" className="mt-1">
-                  {company.industry}
-                </Badge>
-              ) : null}
             </div>
           </div>
         </div>
