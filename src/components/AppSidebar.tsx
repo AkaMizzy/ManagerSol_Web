@@ -20,7 +20,6 @@ const items = [
   { title: "Teams", url: "/teams", icon: Users },
   { title: "Task Elements", url: "/task-elements", icon: List },
   { title: "Task Group Models", url: "/task-group-models", icon: FolderTree },
-  { title: "Create Company", url: "/create-company", icon: Plus },
 ]
 
 export function AppSidebar() {

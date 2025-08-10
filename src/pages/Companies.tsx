@@ -3,7 +3,7 @@ import { Plus, Search, Grid, List, SortAsc } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CompanyCard, Company } from "@/components/CompanyCard"
+import { CompanyCard, Company, TeamMember } from "@/components/CompanyCard"
 import { useNavigate } from "react-router-dom"
 import CompanyDetail from "./CompanyDetail"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
@@ -19,7 +19,7 @@ interface BackendCompany {
   foundedYear?: number;
   sector?: string;
   location?: string;
-  teamMembers?: any[];
+  teamMembers?: Array<{ id: string; name?: string; role?: string }>;
 }
 
 export default function Companies() {
@@ -47,7 +47,7 @@ export default function Companies() {
           foundedYear: c.foundedYear || 0,
           employeeCount: c.nb_users || 0,
           logo: c.logo ? `http://localhost:5000${c.logo}` : undefined,
-          teamMembers: c.teamMembers || [],
+          teamMembers: [] as TeamMember[],
         }))
         setCompanies(mapped)
         setLoading(false)
