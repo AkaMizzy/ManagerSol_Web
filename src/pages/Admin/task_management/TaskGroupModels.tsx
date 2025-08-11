@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, PropsWithChildren } from "react"
-import { Plus, Pencil, Trash2, FolderTree, FileText, Tag, Info, Bold, Italic, Underline } from "lucide-react"
+import { Plus, Pencil, Trash2, FolderTree, FileText, Tag, Info, Bold, Italic, Underline, Eye } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -77,7 +77,7 @@ function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
       setIsBold(document.queryCommandState('bold'))
       setIsItalic(document.queryCommandState('italic'))
       setIsUnderline(document.queryCommandState('underline'))
-    } catch {}
+    } catch { /* ignore unsupported environments */ }
   }
 
   useEffect(() => {
@@ -161,6 +161,8 @@ export default function TaskGroupModels() {
   const [submitting, setSubmitting] = useState(false)
   const [draft, setDraft] = useState<Partial<TaskGroupModel>>({ title: "", domain: "", domain_id: "", description: "" })
   const [domainList, setDomainList] = useState<Array<{ id: string; name: string }>>([])
+  const [viewOpen, setViewOpen] = useState(false)
+  const [viewItem, setViewItem] = useState<TaskGroupModel | null>(null)
 
   const fetchModels = () => {
     setLoading(true)
@@ -222,6 +224,7 @@ export default function TaskGroupModels() {
     setEditOpen(true)
   }
   const openDelete = (id: string) => { setSelectedId(id); setDeleteOpen(true) }
+  const openView = (m: TaskGroupModel) => { setViewItem(m); setViewOpen(true) }
 
   const submitCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -336,7 +339,6 @@ export default function TaskGroupModels() {
                 <TableRow>
                   <TableHead>Title</TableHead>
                   <TableHead>Domain</TableHead>
-                  <TableHead>Description</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -347,8 +349,10 @@ export default function TaskGroupModels() {
                       <div className="flex items-center gap-2"><FolderTree className="h-4 w-4 text-muted-foreground" />{m.title}</div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{m.domain || getDomainNameById(m.domain_id) || '-'}</TableCell>
-                    <TableCell className="text-muted-foreground max-w-[420px] truncate">{m.description || '-'}</TableCell>
                     <TableCell className="text-right space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => openView(m)}>
+                        <Eye className="h-3.5 w-3.5 mr-1" /> View
+                      </Button>
                       <Button variant="outline" size="sm" onClick={() => openEdit(m)}>
                         <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
                       </Button>
@@ -417,6 +421,30 @@ export default function TaskGroupModels() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Details */}
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="max-w-2xl">
+          {viewItem && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-xl font-semibold flex items-center gap-2 text-foreground">
+                  <FolderTree className="h-4 w-4 text-muted-foreground" /> {viewItem.title}
+                </h3>
+                <p className="text-sm text-muted-foreground">{viewItem.domain || getDomainNameById(viewItem.domain_id) || '—'}</p>
+              </div>
+              <div className="rounded-lg border p-4 bg-card/40">
+                <h4 className="text-sm font-medium mb-2 text-foreground">Description</h4>
+                {viewItem.description ? (
+                  <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: viewItem.description }} />
+                ) : (
+                  <p className="text-sm text-muted-foreground">No description.</p>
+                )}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

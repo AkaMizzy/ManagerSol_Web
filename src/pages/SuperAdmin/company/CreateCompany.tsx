@@ -1,14 +1,114 @@
-import { useState, ChangeEvent } from "react"
+import { useState, ChangeEvent, useRef, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { ArrowLeft, Save, ChevronLeft, ChevronRight } from "lucide-react"
+import { ArrowLeft, Save, ChevronLeft, ChevronRight, Bold, Italic, Underline } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 type Step = 1 | 2 | 3
+
+type RichTextEditorProps = { value: string; onChange: (html: string) => void; placeholder?: string }
+
+function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
+  const editorRef = useRef<HTMLDivElement | null>(null)
+  const lastValueRef = useRef<string>("")
+  const [isBold, setIsBold] = useState(false)
+  const [isItalic, setIsItalic] = useState(false)
+  const [isUnderline, setIsUnderline] = useState(false)
+
+  const stripHtml = (html: string) => html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ")
+
+  useEffect(() => {
+    if (!editorRef.current) return
+    if (value !== lastValueRef.current) {
+      editorRef.current.innerHTML = value || ""
+      lastValueRef.current = value || ""
+    }
+  }, [value])
+
+  const keepFocus = (e: React.MouseEvent) => {
+    e.preventDefault()
+  }
+
+  const updateActiveStates = () => {
+    const sel = document.getSelection()
+    if (!sel || sel.rangeCount === 0) return
+    const anchor = sel.anchorNode as Node | null
+    if (!anchor || !editorRef.current) return
+    if (!editorRef.current.contains(anchor)) return
+    try {
+      setIsBold(document.queryCommandState('bold'))
+      setIsItalic(document.queryCommandState('italic'))
+      setIsUnderline(document.queryCommandState('underline'))
+    } catch {
+      // ignore unsupported env
+    }
+  }
+
+  useEffect(() => {
+    const handler = () => updateActiveStates()
+    document.addEventListener('selectionchange', handler)
+    return () => document.removeEventListener('selectionchange', handler)
+  }, [])
+
+  const exec = (cmd: string) => {
+    if (!editorRef.current) return
+    editorRef.current.focus()
+    document.execCommand(cmd, false)
+    const html = editorRef.current.innerHTML
+    onChange(html)
+    lastValueRef.current = html
+    updateActiveStates()
+  }
+
+  const handleInput = () => {
+    if (!editorRef.current) return
+    const html = editorRef.current.innerHTML
+    if (stripHtml(html).trim() === "") {
+      onChange("")
+      lastValueRef.current = ""
+    } else {
+      onChange(html)
+      lastValueRef.current = html
+    }
+    updateActiveStates()
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-1 rounded-md border bg-card p-1">
+        <Button type="button" variant="ghost" size="icon" aria-label="Bold" aria-pressed={isBold} className={isBold ? "bg-primary/15 text-primary" : undefined} onMouseDown={keepFocus} onClick={() => exec("bold")}>
+          <Bold className="h-4 w-4" />
+        </Button>
+        <Button type="button" variant="ghost" size="icon" aria-label="Italic" aria-pressed={isItalic} className={isItalic ? "bg-primary/15 text-primary" : undefined} onMouseDown={keepFocus} onClick={() => exec("italic")}>
+          <Italic className="h-4 w-4" />
+        </Button>
+        <Button type="button" variant="ghost" size="icon" aria-label="Underline" aria-pressed={isUnderline} className={isUnderline ? "bg-primary/15 text-primary" : undefined} onMouseDown={keepFocus} onClick={() => exec("underline")}>
+          <Underline className="h-4 w-4" />
+        </Button>
+      </div>
+      <div
+        ref={editorRef}
+        className="min-h-[120px] w-full rounded-md border border-input bg-background p-3 text-sm focus:outline-none"
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        onKeyUp={updateActiveStates}
+        onMouseUp={updateActiveStates}
+        onBlur={handleInput}
+        data-placeholder={placeholder || "Describe what the company does..."}
+      />
+      <style>{`
+        [contenteditable][data-placeholder]:empty:before {
+          content: attr(data-placeholder);
+          color: hsl(var(--muted-foreground));
+        }
+      `}</style>
+    </div>
+  )
+}
 
 const BANK_NAMES = [
   "Attijariwafa Bank",
@@ -177,10 +277,7 @@ export default function CreateCompany() {
                 <Input id="email" type="email" value={essential.email} onChange={(e) => setEssential({ ...essential, email: e.target.value })} required className="border-border focus:ring-primary" placeholder="contact@company.com" />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description *</Label>
-              <Textarea id="description" value={essential.description} onChange={(e) => setEssential({ ...essential, description: e.target.value })} required className="min-h-[100px] border-border focus:ring-primary" rows={4} placeholder="Describe what the company does..." />
-            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="foundedYear">Founded Year *</Label>
@@ -203,6 +300,14 @@ export default function CreateCompany() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description *</Label>
+              <RichTextEditor
+                value={essential.description}
+                onChange={(html) => setEssential({ ...essential, description: html })}
+                placeholder="Describe what the company does..."
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="logo">Company Logo *</Label>
