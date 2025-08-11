@@ -34,6 +34,24 @@ export default function Login() {
       // Persist minimal auth info for routing guard or later use
       localStorage.setItem('authUser', JSON.stringify({ id: data?.id, email: data?.email, role, token: data?.token, firstname: data?.firstname, lastname: data?.lastname }))
 
+      // Store companyId if provided by backend
+      if (data?.company_id) {
+        localStorage.setItem('companyId', data.company_id)
+      } else if (role === 'admin') {
+        try {
+          const companyRes = await fetch(`http://localhost:5000/users/${data?.id}`)
+          if (companyRes.ok) {
+            const user = await companyRes.json()
+            if (user?.company_id) {
+              localStorage.setItem('companyId', user.company_id)
+            }
+          }
+        } catch (e) {
+          // ignore optional enrichment failure
+          console.warn('Could not resolve companyId for admin:', e)
+        }
+      }
+
       if (role === 'superAdmin' || role === 'admin') {
         navigate('/dashboard')
       } else if (role === 'user') {

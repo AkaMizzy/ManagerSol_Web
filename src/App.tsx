@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import TaskElements from "./pages/Admin/task_management/TaskElements";
 import TaskGroupModels from "./pages/Admin/task_management/TaskGroupModels";
 import TaskGroupElementBoard from "./pages/Admin/task_management/TaskGroupElementBoard";
+import ProjectManagement from "./pages/Admin/project_management/ProjectManagement";
 import Login from "./pages/Login";
 
 const queryClient = new QueryClient();
@@ -67,9 +68,10 @@ function ProtectedApp() {
         <Route path="/companies/:id" element={<ProtectedRoute allowedRoles={["superAdmin"]}><CompanyDetailWrapper /></ProtectedRoute>} />
         <Route path="/create-company" element={<ProtectedRoute allowedRoles={["superAdmin"]}><CreateCompany /></ProtectedRoute>} />
         <Route path="/users" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><User /></ProtectedRoute>} />
-        <Route path="/task-elements" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><TaskElements /></ProtectedRoute>} />
-        <Route path="/task-group-models" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><TaskGroupModels /></ProtectedRoute>} />
-        <Route path="/task-group-elements" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><TaskGroupElementBoard /></ProtectedRoute>} />
+        <Route path="/project-management" element={<ProtectedRoute allowedRoles={["admin"]}><ProjectManagement /></ProtectedRoute>} />
+        <Route path="/task-elements" element={<ProtectedRoute allowedRoles={["admin"]}><TaskElements /></ProtectedRoute>} />
+        <Route path="/task-group-models" element={<ProtectedRoute allowedRoles={["admin"]}><TaskGroupModels /></ProtectedRoute>} />
+        <Route path="/task-group-elements" element={<ProtectedRoute allowedRoles={["admin"]}><TaskGroupElementBoard /></ProtectedRoute>} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

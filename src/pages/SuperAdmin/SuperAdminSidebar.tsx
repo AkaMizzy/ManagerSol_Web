@@ -6,8 +6,6 @@ const items = [
   { title: "Admin Center", url: "/dashboard", icon: Home },
   { title: "Companies", url: "/companies", icon: Building2 },
   { title: "Users", url: "/users", icon: Users },
-  { title: "Task Elements", url: "/task-elements", icon: List },
-  { title: "Task Group Models", url: "/task-group-models", icon: FolderTree },
   
 ]
 

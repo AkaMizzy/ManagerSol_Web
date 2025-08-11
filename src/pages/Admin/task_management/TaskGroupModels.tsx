@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, PropsWithChildren } from "react"
-import { Plus, Pencil, Trash2, FolderTree, FileText, Tag, Info } from "lucide-react"
+import { useEffect, useMemo, useRef, useState, PropsWithChildren } from "react"
+import { Plus, Pencil, Trash2, FolderTree, FileText, Tag, Info, Bold, Italic, Underline } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -42,6 +42,103 @@ function InputWithIcon({ icon: Icon, className, ...props }: React.ComponentProps
           className
         )}
       />
+    </div>
+  )
+}
+
+type RichTextEditorProps = { value: string; onChange: (html: string) => void; placeholder?: string }
+
+function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
+  const editorRef = useRef<HTMLDivElement | null>(null)
+  const lastValueRef = useRef<string>("")
+  const [isBold, setIsBold] = useState(false)
+  const [isItalic, setIsItalic] = useState(false)
+  const [isUnderline, setIsUnderline] = useState(false)
+
+  const stripHtml = (html: string) => html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ")
+
+  useEffect(() => {
+    if (!editorRef.current) return
+    if (value !== lastValueRef.current) {
+      editorRef.current.innerHTML = value || ""
+      lastValueRef.current = value || ""
+    }
+  }, [value])
+
+  const keepFocus = (e: React.MouseEvent) => { e.preventDefault() }
+
+  const updateActiveStates = () => {
+    const sel = document.getSelection()
+    if (!sel || sel.rangeCount === 0) return
+    const anchor = sel.anchorNode as Node | null
+    if (!anchor || !editorRef.current) return
+    if (!editorRef.current.contains(anchor)) return
+    try {
+      setIsBold(document.queryCommandState('bold'))
+      setIsItalic(document.queryCommandState('italic'))
+      setIsUnderline(document.queryCommandState('underline'))
+    } catch {}
+  }
+
+  useEffect(() => {
+    const handler = () => updateActiveStates()
+    document.addEventListener('selectionchange', handler)
+    return () => document.removeEventListener('selectionchange', handler)
+  }, [])
+
+  const exec = (cmd: string) => {
+    if (!editorRef.current) return
+    editorRef.current.focus()
+    document.execCommand(cmd, false)
+    const html = editorRef.current.innerHTML
+    onChange(html)
+    lastValueRef.current = html
+    updateActiveStates()
+  }
+
+  const handleInput = () => {
+    if (!editorRef.current) return
+    const html = editorRef.current.innerHTML
+    if (stripHtml(html).trim() === "") {
+      onChange("")
+      lastValueRef.current = ""
+    } else {
+      onChange(html)
+      lastValueRef.current = html
+    }
+    updateActiveStates()
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-1 rounded-md border bg-card p-1">
+        <Button type="button" variant="ghost" size="icon" aria-label="Bold" aria-pressed={isBold} className={cn(isBold && "bg-primary/15 text-primary")} onMouseDown={keepFocus} onClick={() => exec("bold")}>
+          <Bold className="h-4 w-4" />
+        </Button>
+        <Button type="button" variant="ghost" size="icon" aria-label="Italic" aria-pressed={isItalic} className={cn(isItalic && "bg-primary/15 text-primary")} onMouseDown={keepFocus} onClick={() => exec("italic")}>
+          <Italic className="h-4 w-4" />
+        </Button>
+        <Button type="button" variant="ghost" size="icon" aria-label="Underline" aria-pressed={isUnderline} className={cn(isUnderline && "bg-primary/15 text-primary")} onMouseDown={keepFocus} onClick={() => exec("underline")}>
+          <Underline className="h-4 w-4" />
+        </Button>
+      </div>
+      <div
+        ref={editorRef}
+        className="min-h-[100px] w-full rounded-md border border-input bg-background p-3 text-sm focus:outline-none"
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        onKeyUp={updateActiveStates}
+        onMouseUp={updateActiveStates}
+        onBlur={handleInput}
+        data-placeholder={placeholder || "Write a description..."}
+      />
+      <style>{`
+        [contenteditable][data-placeholder]:empty:before {
+          content: attr(data-placeholder);
+          color: hsl(var(--muted-foreground));
+        }
+      `}</style>
     </div>
   )
 }
@@ -304,10 +401,9 @@ export default function TaskGroupModels() {
               <div className="grid gap-4">
                 <div className="space-y-1.5">
                   <Label>Description <span className="text-xs text-muted-foreground">(optional)</span></Label>
-                  <InputWithIcon
-                    icon={Info}
-                    value={draft.description as string}
-                    onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                  <RichTextEditor
+                    value={(draft.description as string) || ""}
+                    onChange={(html) => setDraft({ ...draft, description: html })}
                     placeholder="e.g. This group contains all safety checks for the company"
                   />
                 </div>
@@ -348,7 +444,11 @@ export default function TaskGroupModels() {
               </div>
               <div className="space-y-1 md:col-span-2">
                 <Label>Description <span className="text-xs text-muted-foreground">(optional)</span></Label>
-                <Input value={draft.description as string} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
+                <RichTextEditor
+                  value={(draft.description as string) || ""}
+                  onChange={(html) => setDraft({ ...draft, description: html })}
+                  placeholder="e.g. This group contains all safety checks for the company"
+                />
               </div>
             </div>
             <div className="flex items-center gap-3 justify-end">

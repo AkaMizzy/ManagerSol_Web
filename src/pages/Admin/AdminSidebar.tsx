@@ -1,10 +1,11 @@
-import { Building2, Users, Home, List, FolderTree, LayoutList } from "lucide-react"
+import { Building2, Users, Home, List, FolderTree, LayoutList, FolderOpen } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Users", url: "/users", icon: Users },
+  { title: "Project Management", url: "/project-management", icon: FolderOpen },
   { title: "Task Elements", url: "/task-elements", icon: List },
   { title: "Task Group Models", url: "/task-group-models", icon: FolderTree },
   { title: "Task Group Elements", url: "/task-group-elements", icon: LayoutList },

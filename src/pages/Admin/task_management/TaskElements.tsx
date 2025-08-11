@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, PropsWithChildren } from "react"
-import { Plus, Pencil, Trash2, FileText, ListFilter, Info, Hash } from "lucide-react"
+import { useEffect, useMemo, useRef, useState, PropsWithChildren, useCallback } from "react"
+import { Plus, Pencil, Trash2, FileText, ListFilter, Info, Hash, Bold, Italic, Underline, Eye } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,7 +43,7 @@ function FormSection({ title, desc, children, className }: PropsWithChildren<{ t
   )
 }
 
-function InputWithIcon({ icon: Icon, className, ...props }: React.ComponentProps<'input'> & { icon: React.ComponentType<any> }) {
+function InputWithIcon({ icon: Icon, className, ...props }: React.ComponentProps<'input'> & { icon: React.ComponentType<{ className?: string }> }) {
   return (
     <div className="relative">
       <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -59,6 +59,136 @@ function InputWithIcon({ icon: Icon, className, ...props }: React.ComponentProps
   )
 }
 
+type RichTextEditorProps = { value: string; onChange: (html: string) => void; placeholder?: string }
+
+function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
+  const editorRef = useRef<HTMLDivElement | null>(null)
+  const lastValueRef = useRef<string>("")
+  const [isBold, setIsBold] = useState(false)
+  const [isItalic, setIsItalic] = useState(false)
+  const [isUnderline, setIsUnderline] = useState(false)
+
+  const stripHtml = (html: string) => html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ")
+
+  // Reflect external value into DOM only when it actually changes
+  useEffect(() => {
+    if (!editorRef.current) return
+    if (value !== lastValueRef.current) {
+      editorRef.current.innerHTML = value || ""
+      lastValueRef.current = value || ""
+    }
+  }, [value])
+
+  const keepFocus = (e: React.MouseEvent) => {
+    e.preventDefault()
+  }
+
+  const updateActiveStates = () => {
+    // Only update if selection is inside this editor
+    const sel = document.getSelection()
+    if (!sel || sel.rangeCount === 0) return
+    const anchor = sel.anchorNode as Node | null
+    if (!anchor || !editorRef.current) return
+    if (!editorRef.current.contains(anchor)) return
+    try {
+      setIsBold(document.queryCommandState('bold'))
+      setIsItalic(document.queryCommandState('italic'))
+      setIsUnderline(document.queryCommandState('underline'))
+    } catch {
+      // ignore if not supported
+    }
+  }
+
+  useEffect(() => {
+    const handler = () => updateActiveStates()
+    document.addEventListener('selectionchange', handler)
+    return () => document.removeEventListener('selectionchange', handler)
+  }, [])
+
+  const exec = (cmd: string) => {
+    if (!editorRef.current) return
+    editorRef.current.focus()
+    document.execCommand(cmd, false)
+    const html = editorRef.current.innerHTML
+    onChange(html)
+    lastValueRef.current = html
+    updateActiveStates()
+  }
+
+  const handleInput = () => {
+    if (!editorRef.current) return
+    const html = editorRef.current.innerHTML
+    if (stripHtml(html).trim() === "") {
+      onChange("")
+      lastValueRef.current = ""
+    } else {
+      onChange(html)
+      lastValueRef.current = html
+    }
+    updateActiveStates()
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-1 rounded-md border bg-card p-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="Bold"
+          aria-pressed={isBold}
+          className={cn(isBold && "bg-primary/15 text-primary")}
+          onMouseDown={keepFocus}
+          onClick={() => exec("bold")}
+        >
+          <Bold className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="Italic"
+          aria-pressed={isItalic}
+          className={cn(isItalic && "bg-primary/15 text-primary")}
+          onMouseDown={keepFocus}
+          onClick={() => exec("italic")}
+        >
+          <Italic className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="Underline"
+          aria-pressed={isUnderline}
+          className={cn(isUnderline && "bg-primary/15 text-primary")}
+          onMouseDown={keepFocus}
+          onClick={() => exec("underline")}
+        >
+          <Underline className="h-4 w-4" />
+        </Button>
+      </div>
+      <div
+        ref={editorRef}
+        className="min-h-[100px] w-full rounded-md border border-input bg-background p-3 text-sm focus:outline-none"
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        onKeyUp={updateActiveStates}
+        onMouseUp={updateActiveStates}
+        onBlur={handleInput}
+        data-placeholder={placeholder || "Write a description..."}
+      />
+      <style>{`
+        [contenteditable][data-placeholder]:empty:before {
+          content: attr(data-placeholder);
+          color: hsl(var(--muted-foreground));
+        }
+      `}</style>
+    </div>
+  )
+}
+
 export default function TaskElements() {
   const { toast } = useToast()
   const [elements, setElements] = useState<TaskElement[]>([])
@@ -70,22 +200,24 @@ export default function TaskElements() {
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [viewOpen, setViewOpen] = useState(false)
 
   const [draft, setDraft] = useState<Partial<TaskElement>>({ title: "", description: "", type: "text", mask: "" })
   const [unites, setUnites] = useState<Array<{ id: string; title: string }>>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [viewItem, setViewItem] = useState<TaskElement | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const fetchElements = () => {
+  const fetchElements = useCallback(() => {
     setLoading(true)
     const qs = typeFilter !== 'all' ? `?type=${encodeURIComponent(typeFilter)}` : ''
     fetch(`http://localhost:5000/task-elements${qs}`)
       .then(res => res.json())
       .then((data) => { setElements(data); setLoading(false) })
       .catch(() => { setError('Failed to load task elements'); setLoading(false) })
-  }
+  }, [typeFilter])
 
-  useEffect(() => { fetchElements() }, [typeFilter])
+  useEffect(() => { fetchElements() }, [fetchElements])
   useEffect(() => {
     fetch('http://localhost:5000/unite-mesures')
       .then(res => res.json())
@@ -122,6 +254,11 @@ export default function TaskElements() {
   const openDelete = (id: string) => {
     setSelectedId(id)
     setDeleteOpen(true)
+  }
+
+  const openView = (el: TaskElement) => {
+    setViewItem(el)
+    setViewOpen(true)
   }
 
   const submitCreate = async (e: React.FormEvent) => {
@@ -243,7 +380,6 @@ export default function TaskElements() {
                 <TableRow>
                   <TableHead>Title</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Description</TableHead>
                   <TableHead>Unit of measure</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -253,9 +389,11 @@ export default function TaskElements() {
                   <TableRow key={el.id}>
                     <TableCell className="font-medium">{el.title}</TableCell>
                     <TableCell className="capitalize">{getTypeLabel(el.type)}</TableCell>
-                    <TableCell className="text-muted-foreground max-w-[420px] truncate">{el.description}</TableCell>
                     <TableCell className="text-muted-foreground">{getUnitTitleById(el.unite_mesure_id) || '-'}</TableCell>
                     <TableCell className="text-right space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => openView(el)}>
+                        <Eye className="h-3.5 w-3.5 mr-1" /> View
+                      </Button>
                       <Button variant="outline" size="sm" onClick={() => openEdit(el)}>
                         <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
                       </Button>
@@ -323,10 +461,9 @@ export default function TaskElements() {
                 
                 <div className="space-y-1.5">
                   <Label>Description <span className="text-xs text-muted-foreground">(optional)</span></Label>
-                  <InputWithIcon
-                    icon={Info}
-                    value={draft.description as string}
-                    onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                  <RichTextEditor
+                    value={(draft.description as string) || ""}
+                    onChange={(html) => setDraft({ ...draft, description: html })}
                     placeholder="Explain what this task element is for"
                   />
                 </div>
@@ -381,7 +518,11 @@ export default function TaskElements() {
               </div>
               <div className="space-y-1 md:col-span-2">
                 <Label>Description <span className="text-xs text-muted-foreground">(optional)</span></Label>
-                <Input value={draft.description as string} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
+                <RichTextEditor
+                  value={(draft.description as string) || ""}
+                  onChange={(html) => setDraft({ ...draft, description: html })}
+                  placeholder="Explain what this task element is for"
+                />
               </div>
               <div className="space-y-1 md:col-span-2">
                 <Label>Unit of measure <span className="text-xs text-muted-foreground">(optional)</span></Label>
@@ -418,6 +559,30 @@ export default function TaskElements() {
               <Button variant="outline" onClick={() => setDeleteOpen(false)} disabled={submitting}>Cancel</Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Details */}
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="max-w-2xl">
+          {viewItem && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-xl font-semibold flex items-center gap-2 text-foreground">
+                  <FileText className="h-4 w-4 text-muted-foreground" /> {viewItem.title}
+                </h3>
+                <p className="text-sm text-muted-foreground">{getTypeLabel(viewItem.type)}{getUnitTitleById(viewItem.unite_mesure_id) ? ` • ${getUnitTitleById(viewItem.unite_mesure_id)}` : ''}</p>
+              </div>
+              <div className="rounded-lg border p-4 bg-card/40">
+                <h4 className="text-sm font-medium mb-2 text-foreground">Description</h4>
+                {viewItem.description ? (
+                  <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: viewItem.description }} />
+                ) : (
+                  <p className="text-sm text-muted-foreground">No description.</p>
+                )}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
