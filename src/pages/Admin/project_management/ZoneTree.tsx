@@ -53,24 +53,46 @@ const ZoneTree: React.FC<ZoneTreeProps> = ({ className, refreshKey }) => {
 
   const renderNode = (node: ZoneNode, depth: number) => {
     const isExpanded = !!expanded[node.id]
-    const indent = depth * 16 // px
+    
     return (
-      <div key={node.id}>
-        <div className="flex items-center py-1" style={{ paddingLeft: indent }}>
+      <div key={node.id} className="flex flex-col">
+        {/* Node content */}
+        <div className="flex items-center py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors group">
           {hasChildren(node) ? (
-            <button type="button" onClick={() => toggle(node.id)} className="mr-1 text-gray-600 hover:text-gray-900">
+            <button 
+              type="button" 
+              onClick={() => toggle(node.id)} 
+              className="mr-3 p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            >
               {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </button>
           ) : (
-            <span className="inline-block w-4 mr-1" />
+            <span className="inline-block w-6 mr-3" />
           )}
-          <MapPin className="h-4 w-4 text-gray-500 mr-2" />
-          <span className="font-medium mr-2">{node.title}</span>
-          <Badge variant="secondary">{node.code}</Badge>
+          
+          <div className="flex items-center gap-3 flex-1">
+            <div className="p-1.5 rounded-md bg-primary/10">
+              <MapPin className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-medium text-sm text-foreground">{node.title}</span>
+              <Badge variant="outline" className="w-fit mt-1 text-xs">{node.code}</Badge>
+            </div>
+          </div>
         </div>
+        
+        {/* Children container - horizontal layout */}
         {isExpanded && hasChildren(node) && (
-          <div>
-            {node.children!.map(child => renderNode(child, depth + 1))}
+          <div className="ml-6 mt-2 border-l-2 border-muted">
+            <div className="pl-4 space-y-1">
+              {node.children!.map(child => (
+                <div key={child.id} className="relative">
+                  {/* Connector line */}
+                  <div className="absolute -left-4 top-4 w-4 h-0.5 bg-muted"></div>
+                  {renderNode(child, depth + 1)}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

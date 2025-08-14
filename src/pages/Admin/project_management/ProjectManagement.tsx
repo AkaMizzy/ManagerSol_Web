@@ -20,6 +20,9 @@ interface Project {
   df: string;
   status?: string | null;
   project_type_title?: string | null;
+  id_zone?: string | null;
+  zone_title?: string | null;
+  zone_code?: string | null;
 }
 
 interface Zone {

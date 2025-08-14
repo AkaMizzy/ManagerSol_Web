@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Calendar, dateFnsLocalizer, Event as RBCEvent } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
-import fr from 'date-fns/locale/fr';
+import { fr } from 'date-fns/locale/fr';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 

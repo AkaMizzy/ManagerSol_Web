@@ -13,9 +13,11 @@ interface Project {
   id_company: string;
   dd: string;
   df: string;
-  id_zone: string;
-  zone_title: string;
-  zone_code: string;
+  status?: string | null;
+  project_type_title?: string | null;
+  id_zone?: string | null;
+  zone_title?: string | null;
+  zone_code?: string | null;
 }
 
 interface Zone {
