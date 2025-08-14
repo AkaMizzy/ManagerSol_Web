@@ -3,14 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { MoreHorizontal, Plus, Boxes, Link2, Pencil, Trash2 } from 'lucide-react'
+import { MoreHorizontal, Plus, Boxes, Link2, Pencil, Trash2, MapPin } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import CreateZoneBlocModal from './CreateZoneBlocModal'
 import EditZoneBlocModal from './EditZoneBlocModal'
 import ManageBlocZonesModal from './ManageBlocZonesModal'
 
-interface ZoneBloc { id: string; intitule: string }
+interface Zone { id: string; title: string; code: string }
+interface ZoneBloc { id: string; intitule: string; zones?: Zone[] }
 
 const ZoneBlocManager: React.FC = () => {
   const [blocs, setBlocs] = useState<ZoneBloc[]>([])
@@ -28,7 +30,24 @@ const ZoneBlocManager: React.FC = () => {
     try {
       setLoading(true)
       const res = await fetch('http://localhost:5000/zone-blocs', { headers: { 'Content-Type': 'application/json', ...authHeader } })
-      setBlocs(res.ok ? await res.json() : [])
+      const blocsData = res.ok ? await res.json() : []
+      
+      // Fetch zones for each bloc
+      const blocsWithZones = await Promise.all(
+        blocsData.map(async (bloc: ZoneBloc) => {
+          try {
+            const zonesRes = await fetch(`http://localhost:5000/zone-blocs/${bloc.id}/zones`, { 
+              headers: { 'Content-Type': 'application/json', ...authHeader } 
+            })
+            const zones = zonesRes.ok ? await zonesRes.json() : []
+            return { ...bloc, zones }
+          } catch {
+            return { ...bloc, zones: [] }
+          }
+        })
+      )
+      
+      setBlocs(blocsWithZones)
     } catch {
       setBlocs([])
     } finally {
@@ -67,13 +86,30 @@ const ZoneBlocManager: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Bloc</TableHead>
+                    <TableHead>Zones associées</TableHead>
                     <TableHead className="w-[120px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {blocs.map(bloc => (
                     <TableRow key={bloc.id}>
-                      <TableCell>{bloc.intitule}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">{bloc.intitule}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {bloc.zones && bloc.zones.length > 0 ? (
+                            bloc.zones.map(zone => (
+                              <Badge key={zone.id} variant="secondary" className="text-xs">
+                                <MapPin className="h-3 w-3 mr-1" />
+                                {zone.title}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-sm text-muted-foreground">Aucune zone associée</span>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -111,7 +147,7 @@ const ZoneBlocManager: React.FC = () => {
 
       {createOpen && <CreateZoneBlocModal onClose={() => setCreateOpen(false)} onCreated={() => { setCreateOpen(false); load() }} />}
       {editBloc && <EditZoneBlocModal bloc={editBloc} onClose={() => setEditBloc(null)} onUpdated={() => { setEditBloc(null); load() }} />}
-      {manageBlocId && <ManageBlocZonesModal blocId={manageBlocId} onClose={() => setManageBlocId(null)} />}
+      {manageBlocId && <ManageBlocZonesModal blocId={manageBlocId} onClose={() => { setManageBlocId(null); load() }} />}
     </div>
   )
 }
