@@ -68,7 +68,7 @@ function ProtectedApp() {
         <Route path="/companies" element={<ProtectedRoute allowedRoles={["superAdmin"]}><Companies /></ProtectedRoute>} />
         <Route path="/companies/:id" element={<ProtectedRoute allowedRoles={["superAdmin"]}><CompanyDetailWrapper /></ProtectedRoute>} />
         <Route path="/create-company" element={<ProtectedRoute allowedRoles={["superAdmin"]}><CreateCompany /></ProtectedRoute>} />
-        <Route path="/users" element={<ProtectedRoute allowedRoles={["superAdmin","admin"]}><User /></ProtectedRoute>} />
+        <Route path="/users" element={<ProtectedRoute allowedRoles={["admin"]}><User /></ProtectedRoute>} />
         <Route path="/project-management" element={<ProtectedRoute allowedRoles={["admin"]}><ProjectManagement /></ProtectedRoute>} />
         <Route path="/task-elements" element={<ProtectedRoute allowedRoles={["admin"]}><TaskElements /></ProtectedRoute>} />
         <Route path="/task-group-models" element={<ProtectedRoute allowedRoles={["admin"]}><TaskGroupModels /></ProtectedRoute>} />

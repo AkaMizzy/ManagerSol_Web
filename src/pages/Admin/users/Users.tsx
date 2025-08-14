@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Search, Users, Building2, Mail, MoreHorizontal, Plus, Link2 } from "lucide-react"
+import { Search, Users, Building2, Mail, MoreHorizontal, Plus } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -9,8 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import ManageUserAssignmentsModal from "./ManageUserAssignmentsModal"
-import UserDetailsModal from "./UserDetailsModal"
 
 interface BackendUser {
   id: string;
@@ -25,7 +23,6 @@ interface BackendUser {
   role?: string;
   company_id: string;
   password?: string;
-  manager_id?: string | null;
 }
 interface BackendCompany {
   id: string;
@@ -43,9 +40,12 @@ interface TeamMember {
   companyIndustry: string;
 }
 
-type EditableUser = Partial<BackendUser> & { id?: string };
-
 export default function User() {
+  // Auth
+  const authRaw = (() => { try { return localStorage.getItem('authUser') } catch { return null } })()
+  const auth = (() => { try { return authRaw ? JSON.parse(authRaw) as { id: string; role: string; token?: string } : null } catch { return null } })()
+  const token = auth?.token as string | undefined
+  const isManager = auth?.role === 'admin'
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCompany, setSelectedCompany] = useState<string>("all")
   const [users, setUsers] = useState<BackendUser[]>([])
@@ -64,22 +64,22 @@ export default function User() {
     status: "",
     role: "user",
     company_id: "",
-    password: "",
-    manager_id: ""
+    password: ""
   })
   const [isCreating, setIsCreating] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
-  const [editUser, setEditUser] = useState<EditableUser | null>(null)
+  const [editUser, setEditUser] = useState<BackendUser | null>(null)
   const [isEditing, setIsEditing] = useState(false)
-  const [assignUserId, setAssignUserId] = useState<string | null>(null)
-  const [detailsUserId, setDetailsUserId] = useState<string | null>(null)
 
-  useEffect(() => {
+  const authHeader = token ? { Authorization: `Bearer ${token}` } : undefined
+
+  const refreshUsers = () => {
     setLoading(true)
-    Promise.all([
-      fetch("http://localhost:5000/users").then(res => res.json()),
-      fetch("http://localhost:5000/companies").then(res => res.json()),
-    ])
+    const usersReq = isManager
+      ? fetch("http://localhost:5000/manager/users", { headers: authHeader }).then(res => res.json())
+      : fetch("http://localhost:5000/users").then(res => res.json())
+    const companiesReq = fetch("http://localhost:5000/companies").then(res => res.json())
+    Promise.all([usersReq, companiesReq])
       .then(([usersData, companiesData]) => {
         setUsers(usersData)
         setCompanies(companiesData)
@@ -89,7 +89,9 @@ export default function User() {
         setError("Failed to fetch users or companies")
         setLoading(false)
       })
-  }, [])
+  }
+
+  useEffect(() => { refreshUsers() }, [])
 
   // Auto-fill email when company is selected
   useEffect(() => {
@@ -134,18 +136,32 @@ export default function User() {
     e.preventDefault()
     setIsCreating(true)
     try {
-      const res = await fetch("http://localhost:5000/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...newUser,
-          manager_id: newUser.manager_id || null
-        })
-      })
+      const res = isManager
+        ? await fetch("http://localhost:5000/manager/users", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...(authHeader || {}) },
+            body: JSON.stringify({
+              firstname: newUser.firstname,
+              lastname: newUser.lastname,
+              email: newUser.email,
+              email_second: newUser.email_second || undefined,
+              identifier: newUser.identifier || undefined,
+              phone1: newUser.phone1,
+              phone2: newUser.phone2 || undefined,
+              password: newUser.password,
+              status: newUser.status || undefined,
+            })
+          })
+        : await fetch("http://localhost:5000/users", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newUser)
+          })
       if (!res.ok) throw new Error("Failed to create user")
       setCreateOpen(false)
       setIsCreating(false)
-      window.location.reload()
+      setNewUser({ firstname: "", lastname: "", email: "", email_second: "", identifier: "", phone1: "", phone2: "", status: "", role: "user", company_id: "", password: "" })
+      refreshUsers()
     } catch (err) {
       setIsCreating(false)
       alert("Failed to create user.")
@@ -153,7 +169,7 @@ export default function User() {
   }
 
   const handleEditUserChange = (field: string, value: string) => {
-    setEditUser(prev => ({ ...(prev || {}), [field]: value }))
+    setEditUser((prev: any) => ({ ...prev, [field]: value }))
   }
 
   const openEditModal = (user: BackendUser) => {
@@ -165,21 +181,50 @@ export default function User() {
     e.preventDefault()
     setIsEditing(true)
     try {
-      const res = await fetch(`http://localhost:5000/users/${editUser?.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...editUser,
-          manager_id: editUser?.manager_id ?? null
-        })
-      })
+      const res = isManager
+        ? await fetch(`http://localhost:5000/manager/users/${editUser?.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", ...(authHeader || {}) },
+            body: JSON.stringify({
+              firstname: editUser?.firstname,
+              lastname: editUser?.lastname,
+              email: editUser?.email,
+              email_second: editUser?.email_second || undefined,
+              identifier: editUser?.identifier || undefined,
+              phone1: editUser?.phone1,
+              phone2: editUser?.phone2 || undefined,
+              password: editUser?.password ? editUser?.password : undefined,
+              status: editUser?.status || undefined,
+            })
+          })
+        : await fetch(`http://localhost:5000/users/${editUser?.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(editUser)
+          })
       if (!res.ok) throw new Error("Failed to update user")
       setEditOpen(false)
       setIsEditing(false)
-      window.location.reload()
+      refreshUsers()
     } catch (err) {
       setIsEditing(false)
       alert("Failed to update user.")
+    }
+  }
+
+  const handleDeleteUser = async (id: string) => {
+    if (!isManager) return
+    const ok = confirm('Delete this user?')
+    if (!ok) return
+    try {
+      const res = await fetch(`http://localhost:5000/manager/users/${id}`, {
+        method: 'DELETE',
+        headers: { ...(authHeader || {}) }
+      })
+      if (!res.ok) throw new Error('Delete failed')
+      refreshUsers()
+    } catch {
+      alert('Failed to delete user.')
     }
   }
 
@@ -324,12 +369,14 @@ export default function User() {
                           <Mail className="mr-2 h-4 w-4" />
                           Send Email
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openEditModal(users.find(u => u.id === member.id))}>Edit Profile</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setDetailsUserId(member.id)}>View Details</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setAssignUserId(member.id)}>
-                          <Link2 className="mr-2 h-4 w-4" />
-                          Manage Assignments
+                        <DropdownMenuItem onClick={() => openEditModal(users.find(u => u.id === member.id) as BackendUser)}>
+                          Edit Profile
                         </DropdownMenuItem>
+                        {isManager && (
+                          <DropdownMenuItem onClick={() => handleDeleteUser(member.id)}>
+                            Delete
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -393,29 +440,32 @@ export default function User() {
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="company_id">Company <span className="text-red-500">*</span></Label>
-                <Select value={newUser.company_id} onValueChange={val => handleNewUserChange("company_id", val)}>
-                  <SelectTrigger className="border-border">
-                    <SelectValue placeholder="Select company" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies.map(company => (
-                      <SelectItem key={company.id} value={company.id}>
-                        {company.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!isManager && (
+                <div className="space-y-2">
+                  <Label htmlFor="company_id">Company <span className="text-red-500">*</span></Label>
+                  <Select value={newUser.company_id} onValueChange={val => handleNewUserChange("company_id", val)}>
+                    <SelectTrigger className="border-border">
+                      <SelectValue placeholder="Select company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies.map(company => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
                   <Input
                     id="email"
                     value={newUser.email}
-                    readOnly
-                    className="bg-muted"
+                    onChange={e => handleNewUserChange("email", e.target.value)}
+                    readOnly={!isManager}
+                    className={!isManager ? "bg-muted" : undefined}
                     required
                   />
                 </div>
@@ -468,19 +518,21 @@ export default function User() {
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role <span className="text-red-500">*</span></Label>
-                  <Select value={newUser.role} onValueChange={val => handleNewUserChange("role", val)}>
-                    <SelectTrigger className="border-border">
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="superAdmin">Super Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {!isManager && (
+                  <div className="space-y-2">
+                    <Label htmlFor="role">Role <span className="text-red-500">*</span></Label>
+                    <Select value={newUser.role} onValueChange={val => handleNewUserChange("role", val)}>
+                      <SelectTrigger className="border-border">
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="superAdmin">Super Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="status">Status <span className="text-xs text-muted-foreground">(optional)</span></Label>
                   <Input
@@ -490,19 +542,7 @@ export default function User() {
                   />
                 </div>
               </div>
-              <div className="col-span-2">
-                <Label>Manager (optional)</Label>
-                <select
-                  className="w-full border rounded h-9 px-2"
-                  value={newUser.manager_id}
-                  onChange={(e) => handleNewUserChange('manager_id', e.target.value)}
-                >
-                  <option value="">— None —</option>
-                  {users.map(u => (
-                    <option key={u.id} value={u.id}>{u.firstname} {u.lastname}</option>
-                  ))}
-                </select>
-              </div>
+              
             </div>
             <div className="flex items-center space-x-4">
               <Button type="submit" disabled={isCreating} className="bg-primary hover:bg-primary-hover text-primary-foreground">
@@ -603,13 +643,12 @@ export default function User() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="password">Password <span className="text-xs text-muted-foreground">(leave blank to keep)</span></Label>
                   <Input
                     id="password"
                     type="password"
-                    value={editUser?.password}
+                    value={(editUser as any)?.password}
                     onChange={e => handleEditUserChange("password", e.target.value)}
-                    required
                   />
                 </div>
               </div>
@@ -636,19 +675,7 @@ export default function User() {
                   />
                 </div>
               </div>
-              <div className="col-span-2">
-                <Label>Manager (optional)</Label>
-                <select
-                  className="w-full border rounded h-9 px-2"
-                  value={editUser?.manager_id || ''}
-                  onChange={(e) => handleEditUserChange('manager_id', e.target.value)}
-                >
-                  <option value="">— None —</option>
-                  {users.filter(u => u.id !== editUser?.id).map(u => (
-                    <option key={u.id} value={u.id}>{u.firstname} {u.lastname}</option>
-                  ))}
-                </select>
-              </div>
+              
             </div>
             <div className="flex items-center space-x-4">
               <Button type="submit" disabled={isEditing} className="bg-primary hover:bg-primary-hover text-primary-foreground">
@@ -661,12 +688,6 @@ export default function User() {
           </form>
         </DialogContent>
       </Dialog>
-      {assignUserId && (
-        <ManageUserAssignmentsModal userId={assignUserId} onClose={() => setAssignUserId(null)} />
-      )}
-      {detailsUserId && (
-        <UserDetailsModal userId={detailsUserId} onClose={() => setDetailsUserId(null)} onOpenManageAssignments={(id) => { setDetailsUserId(null); setAssignUserId(id); }} />
-      )}
     </div>
   )
 }

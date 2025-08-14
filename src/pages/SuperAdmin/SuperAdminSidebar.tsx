@@ -5,7 +5,6 @@ import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGrou
 const items = [
   { title: "Admin Center", url: "/dashboard", icon: Home },
   { title: "Companies", url: "/companies", icon: Building2 },
-  { title: "Users", url: "/users", icon: Users },
   
 ]
 
