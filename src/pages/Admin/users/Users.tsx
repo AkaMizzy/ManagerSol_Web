@@ -403,8 +403,8 @@ export default function User() {
                   </div>
                   <div className="flex items-center space-x-2 mt-4 pt-4 border-t border-border">
                     <Button variant="outline" size="sm" className="flex-1 border-border">
-                      <Mail className="mr-1 h-3 w-3" />
-                      Contact
+                      
+                      Details
                     </Button>
                     <Button variant="outline" size="sm" className="flex-1 border-border">
                       View Profile
