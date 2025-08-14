@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Search, Users, Building2, Mail, MoreHorizontal, Plus } from "lucide-react"
+import { Search, Users, Building2, Mail, MoreHorizontal, Plus, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -7,9 +7,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { UserDetailsModal } from "@/components/UserDetailsModal"
+import { UserDetailsModal } from "@/pages/Admin/users/UserDetailsModal"
 
 interface BackendUser {
   id: string;
@@ -38,7 +38,6 @@ interface TeamMember {
   email: string;
   companyId: string;
   companyName: string;
-  companyIndustry: string;
 }
 
 export default function User() {
@@ -115,7 +114,6 @@ export default function User() {
       email: user.email,
       companyId: user.company_id,
       companyName: company ? company.title : "Unknown",
-      companyIndustry: company ? company.sector || "" : "",
     }
   })
 
@@ -171,8 +169,8 @@ export default function User() {
     }
   }
 
-  const handleEditUserChange = (field: string, value: string) => {
-    setEditUser((prev: any) => ({ ...prev, [field]: value }))
+  const handleEditUserChange = (field: keyof BackendUser, value: string) => {
+    setEditUser((prev) => (prev ? { ...prev, [field]: value } : prev))
   }
 
   const openEditModal = (user: BackendUser) => {
@@ -373,7 +371,7 @@ export default function User() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => window.open(`mailto:${member.email}`, '_blank')}>
                           <Mail className="mr-2 h-4 w-4" />
                           Send Email
                         </DropdownMenuItem>
@@ -395,10 +393,7 @@ export default function User() {
                         {member.companyName}
                       </Badge>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Industry</span>
-                      <span className="text-sm text-foreground">{member.companyIndustry}</span>
-                    </div>
+                    
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Email</span>
                       <a 
@@ -418,8 +413,8 @@ export default function User() {
                     >
                       Details
                     </Button>
-                    <Button variant="outline" size="sm" className="flex-1 border-border">
-                      View Profile
+                    <Button variant="outline" size="sm" className="flex-1 border-border" onClick={() => openEditModal(users.find(u => u.id === member.id) as BackendUser)}>
+                      Edit Profile
                     </Button>
                   </div>
                 </CardContent>
@@ -429,9 +424,13 @@ export default function User() {
         )}
       </div>
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-lg">
-          <form onSubmit={handleCreateUser} className="space-y-6">
-            <div className="border border-border rounded-lg p-6 space-y-4 bg-card">
+        <DialogContent className="max-w-2xl w-[95vw] p-0 max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader className="px-4 pt-3 pb-2 md:px-6 md:pt-4 md:pb-3">
+            <DialogTitle>Create New User</DialogTitle>
+            <DialogDescription>Fill out the information below to add a new team member.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateUser} className="flex-1 overflow-y-auto px-4 md:px-6 pb-3 md:pb-4 space-y-5">
+            <div className="rounded-xl border border-border bg-card/40 p-4 md:p-5 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstname">First Name <span className="text-red-500">*</span></Label>
@@ -556,119 +555,60 @@ export default function User() {
               </div>
               
             </div>
-            <div className="flex items-center space-x-4">
+            <DialogFooter className="flex items-center gap-2">
               <Button type="submit" disabled={isCreating} className="bg-primary hover:bg-primary-hover text-primary-foreground">
                 {isCreating ? "Creating..." : "Create User"}
               </Button>
-              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)} disabled={isCreating} className="border-border">
-                Cancel
-              </Button>
-            </div>
+              <DialogClose asChild>
+                <Button type="button" variant="outline" disabled={isCreating} className="border-border">Cancel</Button>
+              </DialogClose>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg">
-          <form onSubmit={handleEditUser} className="space-y-6">
-            <div className="border border-border rounded-lg p-6 space-y-4 bg-card">
+        <DialogContent className="max-w-2xl w-[95vw] p-0 max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader className="px-4 pt-3 pb-2 md:px-6 md:pt-4 md:pb-3">
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>Update the user information below.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditUser} className="flex-1 overflow-y-auto px-4 md:px-6 pb-3 md:pb-4 space-y-5">
+            {/* Identity */}
+            <div className="rounded-xl border border-border bg-card/40 p-4 md:p-5">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Identity</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="firstname">First Name <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="firstname"
-                    value={editUser?.firstname}
-                    onChange={e => handleEditUserChange("firstname", e.target.value)}
-                    required
-                  />
+                  <Input id="firstname" value={editUser?.firstname || ''} onChange={e => handleEditUserChange('firstname', e.target.value)} required />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="lastname">Last Name <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="lastname"
-                    value={editUser?.lastname}
-                    onChange={e => handleEditUserChange("lastname", e.target.value)}
-                    required
-                  />
+                  <Input id="lastname" value={editUser?.lastname || ''} onChange={e => handleEditUserChange('lastname', e.target.value)} required />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="company_id">Company <span className="text-red-500">*</span></Label>
-                <Select value={editUser?.company_id} onValueChange={val => handleEditUserChange("company_id", val)}>
-                  <SelectTrigger className="border-border">
-                    <SelectValue placeholder="Select company" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies.map(company => (
-                      <SelectItem key={company.id} value={company.id}>
-                        {company.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            </div>
+
+            {/* Company & Role */}
+            <div className="rounded-xl border border-border bg-card/40 p-4 md:p-5">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Company & Role</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="email"
-                    value={editUser?.email}
-                    readOnly
-                    className="bg-muted"
-                    required
-                  />
+                <div className="space-y-1.5">
+                  <Label htmlFor="company_id">Company <span className="text-red-500">*</span></Label>
+                  <Select value={editUser?.company_id} onValueChange={val => handleEditUserChange('company_id', val)}>
+                    <SelectTrigger className="border-border" disabled={isManager}>
+                      <SelectValue placeholder="Select company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies.map(company => (
+                        <SelectItem key={company.id} value={company.id}>{company.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email_second">Secondary Email <span className="text-xs text-muted-foreground">(optional)</span></Label>
-                  <Input
-                    id="email_second"
-                    value={editUser?.email_second}
-                    onChange={e => handleEditUserChange("email_second", e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone1">Phone <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="phone1"
-                    value={editUser?.phone1}
-                    onChange={e => handleEditUserChange("phone1", e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone2">Secondary Phone <span className="text-xs text-muted-foreground">(optional)</span></Label>
-                  <Input
-                    id="phone2"
-                    value={editUser?.phone2}
-                    onChange={e => handleEditUserChange("phone2", e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="identifier">Identifier <span className="text-xs text-muted-foreground">(optional)</span></Label>
-                  <Input
-                    id="identifier"
-                    value={editUser?.identifier}
-                    onChange={e => handleEditUserChange("identifier", e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password <span className="text-xs text-muted-foreground">(leave blank to keep)</span></Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={(editUser as any)?.password}
-                    onChange={e => handleEditUserChange("password", e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="role">Role <span className="text-red-500">*</span></Label>
-                  <Select value={editUser?.role} onValueChange={val => handleEditUserChange("role", val)}>
-                    <SelectTrigger className="border-border">
+                  <Select value={editUser?.role} onValueChange={val => handleEditUserChange('role', val)}>
+                    <SelectTrigger className="border-border" disabled={isManager}>
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
@@ -678,25 +618,55 @@ export default function User() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status <span className="text-xs text-muted-foreground">(optional)</span></Label>
-                  <Input
-                    id="status"
-                    value={editUser?.status}
-                    onChange={e => handleEditUserChange("status", e.target.value)}
-                  />
+              </div>
+            </div>
+
+            {/* Contact */}
+            <div className="rounded-xl border border-border bg-card/40 p-4 md:p-5">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Contact</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
+                  <Input id="email" value={editUser?.email || ''} onChange={e => handleEditUserChange('email', e.target.value)} required />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="email_second">Secondary Email <span className="text-xs text-muted-foreground">(optional)</span></Label>
+                  <Input id="email_second" value={editUser?.email_second || ''} onChange={e => handleEditUserChange('email_second', e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone1">Phone <span className="text-red-500">*</span></Label>
+                  <Input id="phone1" value={editUser?.phone1 || ''} onChange={e => handleEditUserChange('phone1', e.target.value)} required />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone2">Secondary Phone <span className="text-xs text-muted-foreground">(optional)</span></Label>
+                  <Input id="phone2" value={editUser?.phone2 || ''} onChange={e => handleEditUserChange('phone2', e.target.value)} />
                 </div>
               </div>
-              
             </div>
-            <div className="flex items-center space-x-4">
+
+            {/* Security */}
+            <div className="rounded-xl border border-border bg-card/40 p-4 md:p-5">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Security</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="identifier">Identifier <span className="text-xs text-muted-foreground">(optional)</span></Label>
+                  <Input id="identifier" value={editUser?.identifier || ''} onChange={e => handleEditUserChange('identifier', e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="password">Password <span className="text-xs text-muted-foreground">(leave blank to keep)</span></Label>
+                  <Input id="password" type="password" value={editUser?.password as string | undefined} onChange={e => handleEditUserChange('password', e.target.value)} />
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="flex items-center gap-2">
               <Button type="submit" disabled={isEditing} className="bg-primary hover:bg-primary-hover text-primary-foreground">
-                {isEditing ? "Saving..." : "Save Changes"}
+                {isEditing ? 'Saving...' : 'Save Changes'}
               </Button>
-              <Button type="button" variant="outline" onClick={() => setEditOpen(false)} disabled={isEditing} className="border-border">
-                Cancel
-              </Button>
-            </div>
+              <DialogClose asChild>
+                <Button type="button" variant="outline" disabled={isEditing} className="border-border">Cancel</Button>
+              </DialogClose>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
