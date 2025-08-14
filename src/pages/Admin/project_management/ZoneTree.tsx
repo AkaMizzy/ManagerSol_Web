@@ -55,9 +55,9 @@ const ZoneTree: React.FC<ZoneTreeProps> = ({ className, refreshKey }) => {
     const isExpanded = !!expanded[node.id]
     
     return (
-      <div key={node.id} className="flex flex-col">
+      <div key={node.id} className="flex items-center">
         {/* Node content */}
-        <div className="flex items-center py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors group">
+        <div className="flex items-center py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors group min-w-fit">
           {hasChildren(node) ? (
             <button 
               type="button" 
@@ -70,25 +70,26 @@ const ZoneTree: React.FC<ZoneTreeProps> = ({ className, refreshKey }) => {
             <span className="inline-block w-6 mr-3" />
           )}
           
-          <div className="flex items-center gap-3 flex-1">
+          <div className="flex items-center gap-3">
             <div className="p-1.5 rounded-md bg-primary/10">
               <MapPin className="h-4 w-4 text-primary" />
             </div>
             <div className="flex flex-col">
-              <span className="font-medium text-sm text-foreground">{node.title}</span>
+              <span className="font-medium text-sm text-foreground whitespace-nowrap">{node.title}</span>
               <Badge variant="outline" className="w-fit mt-1 text-xs">{node.code}</Badge>
             </div>
           </div>
         </div>
         
-        {/* Children container - horizontal layout */}
+        {/* Children container - horizontal layout to the right */}
         {isExpanded && hasChildren(node) && (
-          <div className="ml-6 mt-2 border-l-2 border-muted">
-            <div className="pl-4 space-y-1">
+          <div className="flex items-center ml-4">
+            {/* Connector line */}
+            <div className="w-8 h-0.5 bg-muted mr-4"></div>
+            <div className="flex flex-col gap-2">
               {node.children!.map(child => (
-                <div key={child.id} className="relative">
-                  {/* Connector line */}
-                  <div className="absolute -left-4 top-4 w-4 h-0.5 bg-muted"></div>
+                <div key={child.id} className="flex items-center">
+                  <div className="w-4 h-0.5 bg-muted mr-2"></div>
                   {renderNode(child, depth + 1)}
                 </div>
               ))}
@@ -102,7 +103,11 @@ const ZoneTree: React.FC<ZoneTreeProps> = ({ className, refreshKey }) => {
   const content = useMemo(() => {
     if (loading) return <div className="text-sm text-muted-foreground">Chargement de la hiérarchie...</div>
     if (!tree || tree.length === 0) return <div className="text-sm text-muted-foreground">Aucune hiérarchie disponible</div>
-    return tree.map(root => renderNode(root, 0))
+    return (
+      <div className="space-y-3">
+        {tree.map(root => renderNode(root, 0))}
+      </div>
+    )
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tree, expanded, loading])
 
