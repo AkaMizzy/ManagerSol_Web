@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { UserDetailsModal } from "@/components/UserDetailsModal"
 
 interface BackendUser {
   id: string;
@@ -70,6 +71,8 @@ export default function User() {
   const [editOpen, setEditOpen] = useState(false)
   const [editUser, setEditUser] = useState<BackendUser | null>(null)
   const [isEditing, setIsEditing] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
 
   const authHeader = token ? { Authorization: `Bearer ${token}` } : undefined
 
@@ -226,6 +229,11 @@ export default function User() {
     } catch {
       alert('Failed to delete user.')
     }
+  }
+
+  const openUserDetails = (userId: string) => {
+    setSelectedUserId(userId)
+    setDetailsOpen(true)
   }
 
   if (loading) {
@@ -402,8 +410,12 @@ export default function User() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 mt-4 pt-4 border-t border-border">
-                    <Button variant="outline" size="sm" className="flex-1 border-border">
-                      
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1 border-border"
+                      onClick={() => openUserDetails(member.id)}
+                    >
                       Details
                     </Button>
                     <Button variant="outline" size="sm" className="flex-1 border-border">
@@ -688,6 +700,14 @@ export default function User() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <UserDetailsModal
+        isOpen={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        userId={selectedUserId}
+        authHeader={authHeader}
+        isManager={isManager}
+      />
     </div>
   )
 }
