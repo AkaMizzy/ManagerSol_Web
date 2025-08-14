@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Search, Users, Building2, Mail, MoreHorizontal, Plus } from "lucide-react"
+import { Search, Users, Building2, Mail, MoreHorizontal, Plus, Link2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import ManageUserAssignmentsModal from "./ManageUserAssignmentsModal"
+import UserDetailsModal from "./UserDetailsModal"
 
 interface BackendUser {
   id: string;
@@ -23,6 +25,7 @@ interface BackendUser {
   role?: string;
   company_id: string;
   password?: string;
+  manager_id?: string | null;
 }
 interface BackendCompany {
   id: string;
@@ -39,6 +42,8 @@ interface TeamMember {
   companyName: string;
   companyIndustry: string;
 }
+
+type EditableUser = Partial<BackendUser> & { id?: string };
 
 export default function User() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -59,12 +64,15 @@ export default function User() {
     status: "",
     role: "user",
     company_id: "",
-    password: ""
+    password: "",
+    manager_id: ""
   })
   const [isCreating, setIsCreating] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
-  const [editUser, setEditUser] = useState<BackendUser | null>(null)
+  const [editUser, setEditUser] = useState<EditableUser | null>(null)
   const [isEditing, setIsEditing] = useState(false)
+  const [assignUserId, setAssignUserId] = useState<string | null>(null)
+  const [detailsUserId, setDetailsUserId] = useState<string | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -129,7 +137,10 @@ export default function User() {
       const res = await fetch("http://localhost:5000/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newUser)
+        body: JSON.stringify({
+          ...newUser,
+          manager_id: newUser.manager_id || null
+        })
       })
       if (!res.ok) throw new Error("Failed to create user")
       setCreateOpen(false)
@@ -142,7 +153,7 @@ export default function User() {
   }
 
   const handleEditUserChange = (field: string, value: string) => {
-    setEditUser((prev: any) => ({ ...prev, [field]: value }))
+    setEditUser(prev => ({ ...(prev || {}), [field]: value }))
   }
 
   const openEditModal = (user: BackendUser) => {
@@ -157,7 +168,10 @@ export default function User() {
       const res = await fetch(`http://localhost:5000/users/${editUser?.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editUser)
+        body: JSON.stringify({
+          ...editUser,
+          manager_id: editUser?.manager_id ?? null
+        })
       })
       if (!res.ok) throw new Error("Failed to update user")
       setEditOpen(false)
@@ -311,7 +325,11 @@ export default function User() {
                           Send Email
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openEditModal(users.find(u => u.id === member.id))}>Edit Profile</DropdownMenuItem>
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setDetailsUserId(member.id)}>View Details</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setAssignUserId(member.id)}>
+                          <Link2 className="mr-2 h-4 w-4" />
+                          Manage Assignments
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -472,7 +490,19 @@ export default function User() {
                   />
                 </div>
               </div>
-              
+              <div className="col-span-2">
+                <Label>Manager (optional)</Label>
+                <select
+                  className="w-full border rounded h-9 px-2"
+                  value={newUser.manager_id}
+                  onChange={(e) => handleNewUserChange('manager_id', e.target.value)}
+                >
+                  <option value="">— None —</option>
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>{u.firstname} {u.lastname}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               <Button type="submit" disabled={isCreating} className="bg-primary hover:bg-primary-hover text-primary-foreground">
@@ -606,7 +636,19 @@ export default function User() {
                   />
                 </div>
               </div>
-              
+              <div className="col-span-2">
+                <Label>Manager (optional)</Label>
+                <select
+                  className="w-full border rounded h-9 px-2"
+                  value={editUser?.manager_id || ''}
+                  onChange={(e) => handleEditUserChange('manager_id', e.target.value)}
+                >
+                  <option value="">— None —</option>
+                  {users.filter(u => u.id !== editUser?.id).map(u => (
+                    <option key={u.id} value={u.id}>{u.firstname} {u.lastname}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               <Button type="submit" disabled={isEditing} className="bg-primary hover:bg-primary-hover text-primary-foreground">
@@ -619,6 +661,12 @@ export default function User() {
           </form>
         </DialogContent>
       </Dialog>
+      {assignUserId && (
+        <ManageUserAssignmentsModal userId={assignUserId} onClose={() => setAssignUserId(null)} />
+      )}
+      {detailsUserId && (
+        <UserDetailsModal userId={detailsUserId} onClose={() => setDetailsUserId(null)} onOpenManageAssignments={(id) => { setDetailsUserId(null); setAssignUserId(id); }} />
+      )}
     </div>
   )
 }

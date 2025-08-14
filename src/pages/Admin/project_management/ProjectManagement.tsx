@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, FolderOpen, MapPin, Users } from 'lucide-react';
+import { Plus, FolderOpen, MapPin, Users, Boxes } from 'lucide-react';
 import ProjectList from './ProjectList';
 import ZoneList from './ZoneList';
 import ControlList from './ControlList';
 import CreateProjectModal from './CreateProjectModal';
 import CreateZoneModal from './CreateZoneModal';
 import CreateControlModal from './CreateControlModal';
+import ControlCalendar from './ControlCalendar';
+import ZoneBlocManager from './ZoneBlocManager';
 
 interface Project {
   id: string;
@@ -16,9 +18,8 @@ interface Project {
   id_company: string;
   dd: string;
   df: string;
-  id_zone: string;
-  zone_title: string;
-  zone_code: string;
+  status?: string | null;
+  project_type_title?: string | null;
 }
 
 interface Zone {
@@ -43,11 +44,14 @@ interface Control {
   email: string;
 }
 
+interface SimpleUser { id: string; firstname: string; lastname: string; }
+
 const ProjectManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState('projects');
   const [projects, setProjects] = useState<Project[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
   const [controls, setControls] = useState<Control[]>([]);
+  const [users, setUsers] = useState<SimpleUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [showCreateZone, setShowCreateZone] = useState(false);
@@ -92,9 +96,12 @@ const ProjectManagement: React.FC = () => {
       
       // Fetch projects
       const projectsResponse = await fetch(`http://localhost:5000/projects/${companyId}`, { headers: { 'Content-Type': 'application/json', ...authHeader } });
+      let projectsData: Project[] = [];
       if (projectsResponse.ok) {
-        const projectsData = await projectsResponse.json();
+        projectsData = await projectsResponse.json();
         setProjects(projectsData);
+      } else {
+        setProjects([]);
       }
 
       // Fetch zones
@@ -104,11 +111,17 @@ const ProjectManagement: React.FC = () => {
         setZones(zonesData);
       }
 
-      // Fetch controls for the company's projects
-      if (projects.length > 0) {
-        const projectIds = projects.map(p => p.id);
+      // Fetch users for filters
+      const usersResponse = await fetch(`http://localhost:5000/users/company/${companyId}`, { headers: { 'Content-Type': 'application/json', ...authHeader } });
+      if (usersResponse.ok) {
+        const usersData = await usersResponse.json();
+        setUsers((usersData || []).map((u: any) => ({ id: u.id, firstname: u.firstname, lastname: u.lastname })));
+      }
+
+      // Fetch controls for the company's projects using fresh projectsData
+      if (projectsData.length > 0) {
+        const projectIds = projectsData.map(p => p.id);
         const allControls: Control[] = [];
-        
         for (const projectId of projectIds) {
           const controlsResponse = await fetch(`http://localhost:5000/controls/project/${projectId}`, { headers: { 'Content-Type': 'application/json', ...authHeader } });
           if (controlsResponse.ok) {
@@ -116,8 +129,9 @@ const ProjectManagement: React.FC = () => {
             allControls.push(...controlsData);
           }
         }
-        
         setControls(allControls);
+      } else {
+        setControls([]);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -184,7 +198,7 @@ const ProjectManagement: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="projects" className="flex items-center gap-2">
             <FolderOpen className="h-4 w-4" />
             Projects
@@ -192,6 +206,10 @@ const ProjectManagement: React.FC = () => {
           <TabsTrigger value="zones" className="flex items-center gap-2">
             <MapPin className="h-4 w-4" />
             Zones
+          </TabsTrigger>
+          <TabsTrigger value="zoneBlocs" className="flex items-center gap-2">
+            <Boxes className="h-4 w-4" />
+            Zone Blocs
           </TabsTrigger>
           <TabsTrigger value="controls" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
@@ -210,8 +228,7 @@ const ProjectManagement: React.FC = () => {
             </CardHeader>
             <CardContent>
               <ProjectList 
-                projects={projects} 
-                zones={zones}
+                projects={projects}
                 onProjectDeleted={handleProjectDeleted}
                 onRefresh={fetchData}
               />
@@ -238,7 +255,20 @@ const ProjectManagement: React.FC = () => {
           </Card>
         </TabsContent>
 
+        <TabsContent value="zoneBlocs" className="space-y-4">
+          <ZoneBlocManager />
+        </TabsContent>
+
         <TabsContent value="controls" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Control Calendar</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ControlCalendar controls={controls} projects={projects} zones={zones} users={users} />
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Control Assignments</CardTitle>
@@ -261,7 +291,6 @@ const ProjectManagement: React.FC = () => {
       {/* Modals */}
       {showCreateProject && (
         <CreateProjectModal
-          zones={zones}
           companyId={companyId}
           onClose={() => setShowCreateProject(false)}
           onProjectCreated={handleProjectCreated}

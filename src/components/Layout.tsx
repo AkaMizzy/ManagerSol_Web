@@ -76,7 +76,7 @@ export function Layout({ children }: LayoutProps) {
                     <p className="text-xs text-muted-foreground">{displayEmail}</p>
                   </div>
                   
-                  <DropdownMenuItem className="cursor-pointer hover:bg-accent">
+                  <DropdownMenuItem className="cursor-pointer hover:bg-accent" onClick={() => navigate('/profile')}>
                     <UserCircle className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>

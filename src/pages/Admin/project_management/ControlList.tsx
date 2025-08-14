@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Edit, Trash2, MoreHorizontal, Users, Calendar, MapPin, FolderOpen } from 'lucide-react';
 import EditControlModal from './EditControlModal';
+import { toast } from 'sonner';
 
 interface Control {
   id: string;
@@ -77,23 +78,29 @@ const ControlList: React.FC<ControlListProps> = ({
       return;
     }
 
+    const authRaw = typeof window !== 'undefined' ? localStorage.getItem('authUser') : null;
+    const auth = authRaw ? JSON.parse(authRaw) : null;
+    const authHeader = auth?.token ? { Authorization: `Bearer ${auth.token}` } : ({} as any);
+
     try {
       const response = await fetch(`http://localhost:5000/controls/${controlId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          ...authHeader,
         },
       });
 
       if (response.ok) {
         onControlDeleted(controlId);
+        toast.success('Control deleted');
       } else {
         const error = await response.json();
-        alert(`Erreur: ${error.error}`);
+        toast.error(error.error || 'Failed to delete control');
       }
     } catch (error) {
       console.error('Error deleting control:', error);
-      alert('Erreur lors de la suppression de l\'affectation');
+      toast.error("Erreur lors de la suppression de l'affectation");
     }
   };
 

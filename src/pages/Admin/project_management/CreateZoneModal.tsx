@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { X } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface CreateZoneModalProps {
   onClose: () => void;
   onZoneCreated: (zone: any) => void;
 }
+
+interface ZoneOption { id: string; title: string; level?: number }
+interface ZoneType { id: string; intitule: string }
 
 const CreateZoneModal: React.FC<CreateZoneModalProps> = ({
   onClose,
@@ -18,35 +22,59 @@ const CreateZoneModal: React.FC<CreateZoneModalProps> = ({
     title: '',
     code: '',
     latitude: '',
-    longitude: ''
+    longitude: '',
+    id_zone: '',
+    zone_type_id: ''
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [zones, setZones] = useState<ZoneOption[]>([]);
+  const [zoneTypes, setZoneTypes] = useState<ZoneType[]>([]);
+  const [computedLevel, setComputedLevel] = useState<number>(0);
 
   const authRaw = typeof window !== 'undefined' ? localStorage.getItem('authUser') : null;
   const auth = authRaw ? JSON.parse(authRaw) : null;
   const authHeader = auth?.token ? { Authorization: `Bearer ${auth.token}` } : ({} as any);
 
+  useEffect(() => {
+    Promise.all([
+      fetch('http://localhost:5000/zones', { headers: { 'Content-Type': 'application/json', ...authHeader } }),
+      fetch('http://localhost:5000/zone-types', { headers: { 'Content-Type': 'application/json', ...authHeader } })
+    ])
+      .then(async ([rz, rt]) => {
+        const zs = rz.ok ? await rz.json() : [];
+        const ts = rt.ok ? await rt.json() : [];
+        setZones(zs || []);
+        setZoneTypes(ts || []);
+      })
+      .catch(() => { setZones([]); setZoneTypes([]); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!formData.id_zone) {
+      setComputedLevel(0);
+      return;
+    }
+    const parent = zones.find(z => z.id === formData.id_zone) as any;
+    if (parent && typeof parent.level === 'number') {
+      setComputedLevel((parent.level || 0) + 1);
+    } else {
+      setComputedLevel(1);
+    }
+  }, [formData.id_zone, zones]);
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.title.trim()) {
-      newErrors.title = 'Le titre est requis';
-    }
+    if (!formData.title.trim()) newErrors.title = 'Le titre est requis';
+    if (!formData.code.trim()) newErrors.code = 'Le code est requis';
+    else if (formData.code.length > 10) newErrors.code = 'Le code ne doit pas dépasser 10 caractères';
+    if (!formData.zone_type_id) newErrors.zone_type_id = 'Type de zone requis';
 
-    if (!formData.code.trim()) {
-      newErrors.code = 'Le code est requis';
-    } else if (formData.code.length > 10) {
-      newErrors.code = 'Le code ne doit pas dépasser 10 caractères';
-    }
-
-    if (formData.latitude && isNaN(Number(formData.latitude))) {
-      newErrors.latitude = 'Latitude invalide';
-    }
-    if (formData.longitude && isNaN(Number(formData.longitude))) {
-      newErrors.longitude = 'Longitude invalide';
-    }
+    if (formData.latitude && isNaN(Number(formData.latitude))) newErrors.latitude = 'Latitude invalide';
+    if (formData.longitude && isNaN(Number(formData.longitude))) newErrors.longitude = 'Longitude invalide';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -54,10 +82,7 @@ const CreateZoneModal: React.FC<CreateZoneModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
 
@@ -65,39 +90,40 @@ const CreateZoneModal: React.FC<CreateZoneModalProps> = ({
       const body = new FormData();
       body.append('title', formData.title);
       body.append('code', formData.code);
+      body.append('zone_type_id', formData.zone_type_id);
       if (formData.latitude) body.append('latitude', formData.latitude);
       if (formData.longitude) body.append('longitude', formData.longitude);
+      if (formData.id_zone) body.append('id_zone', formData.id_zone);
       if (logoFile) body.append('logo', logoFile);
 
       const response = await fetch('http://localhost:5000/zones', {
         method: 'POST',
-        headers: {
-          ...authHeader,
-        },
+        headers: { ...authHeader },
         body,
       });
 
       if (response.ok) {
         const result = await response.json();
-        
-        // Create the zone object
         const newZone = {
           id: result.zoneId,
           title: formData.title,
           code: formData.code,
           latitude: formData.latitude || null,
           longitude: formData.longitude || null,
+          id_zone: formData.id_zone || null,
+          zone_type_id: formData.zone_type_id,
+          level: computedLevel,
           logo: result.logo || null
         };
-
         onZoneCreated(newZone);
+        toast.success('Zone created');
       } else {
         const error = await response.json();
-        alert(`Erreur: ${error.error}`);
+        toast.error(error.error || 'Failed to create zone');
       }
     } catch (error) {
       console.error('Error creating zone:', error);
-      alert('Erreur lors de la création de la zone');
+      toast.error('Erreur lors de la création de la zone');
     } finally {
       setLoading(false);
     }
@@ -105,11 +131,7 @@ const CreateZoneModal: React.FC<CreateZoneModalProps> = ({
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
   };
 
   return (
@@ -127,83 +149,59 @@ const CreateZoneModal: React.FC<CreateZoneModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="title">Titre de la zone *</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => handleInputChange('title', e.target.value)}
-              placeholder="Nom de la zone"
-              className={errors.title ? 'border-red-500' : ''}
-            />
-            {errors.title && (
-              <p className="text-sm text-red-500">{errors.title}</p>
-            )}
+            <Input id="title" value={formData.title} onChange={(e) => handleInputChange('title', e.target.value)} placeholder="Nom de la zone" className={errors.title ? 'border-red-500' : ''} />
+            {errors.title && (<p className="text-sm text-red-500">{errors.title}</p>)}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="code">Code de la zone *</Label>
-            <Input
-              id="code"
-              value={formData.code}
-              onChange={(e) => handleInputChange('code', e.target.value.toUpperCase())}
-              placeholder="Code (ex: ZN, ZS)"
-              maxLength={10}
-              className={errors.code ? 'border-red-500' : ''}
-            />
-            {errors.code && (
-              <p className="text-sm text-red-500">{errors.code}</p>
-            )}
-            <p className="text-xs text-gray-500">
-              Code court pour identifier la zone (max 10 caractères)
-            </p>
+            <Input id="code" value={formData.code} onChange={(e) => handleInputChange('code', e.target.value.toUpperCase())} placeholder="Code (ex: ZN, ZS)" maxLength={10} className={errors.code ? 'border-red-500' : ''} />
+            {errors.code && (<p className="text-sm text-red-500">{errors.code}</p>)}
+            <p className="text-xs text-gray-500">Code court pour identifier la zone (max 10 caractères)</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="zoneType">Type de zone *</Label>
+            <select id="zoneType" className={`w-full border rounded h-9 px-2 ${errors.zone_type_id ? 'border-red-500' : ''}`} value={formData.zone_type_id} onChange={(e) => handleInputChange('zone_type_id', e.target.value)}>
+              <option value="">— Sélectionner —</option>
+              {zoneTypes.map((t) => (
+                <option key={t.id} value={t.id}>{t.intitule}</option>
+              ))}
+            </select>
+            {errors.zone_type_id && (<p className="text-sm text-red-500">{errors.zone_type_id}</p>)}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="parent">Zone parente (optionnel)</Label>
+            <select id="parent" className="w-full border rounded h-9 px-2" value={formData.id_zone} onChange={(e) => handleInputChange('id_zone', e.target.value)}>
+              <option value="">— Aucune —</option>
+              {zones.map((z: any) => (<option key={z.id} value={z.id}>{z.title}</option>))}
+            </select>
+            <p className="text-xs text-gray-500">Niveau calculé: {computedLevel}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="latitude">Latitude</Label>
-              <Input
-                id="latitude"
-                value={formData.latitude}
-                onChange={(e) => handleInputChange('latitude', e.target.value)}
-                placeholder="ex: 33.589886"
-                className={errors.latitude ? 'border-red-500' : ''}
-              />
-              {errors.latitude && (
-                <p className="text-sm text-red-500">{errors.latitude}</p>
-              )}
+              <Input id="latitude" value={formData.latitude} onChange={(e) => handleInputChange('latitude', e.target.value)} placeholder="ex: 33.589886" className={errors.latitude ? 'border-red-500' : ''} />
+              {errors.latitude && (<p className="text-sm text-red-500">{errors.latitude}</p>)}
             </div>
             <div className="space-y-2">
               <Label htmlFor="longitude">Longitude</Label>
-              <Input
-                id="longitude"
-                value={formData.longitude}
-                onChange={(e) => handleInputChange('longitude', e.target.value)}
-                placeholder="ex: -6.849813"
-                className={errors.longitude ? 'border-red-500' : ''}
-              />
-              {errors.longitude && (
-                <p className="text-sm text-red-500">{errors.longitude}</p>
-              )}
+              <Input id="longitude" value={formData.longitude} onChange={(e) => handleInputChange('longitude', e.target.value)} placeholder="ex: -6.849813" className={errors.longitude ? 'border-red-500' : ''} />
+              {errors.longitude && (<p className="text-sm text-red-500">{errors.longitude}</p>)}
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="logo">Logo</Label>
-            <Input
-              id="logo"
-              type="file"
-              accept="image/*"
-              onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-            />
+            <Input id="logo" type="file" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] || null)} />
             <p className="text-xs text-gray-500">Image optionnelle pour la zone</p>
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Annuler
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Création...' : 'Créer la zone'}
-            </Button>
+            <Button type="button" variant="outline" onClick={onClose}>Annuler</Button>
+            <Button type="submit" disabled={loading}>{loading ? 'Création...' : 'Créer la zone'}</Button>
           </div>
         </form>
       </DialogContent>

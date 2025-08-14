@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,8 +16,11 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { Edit, Trash2, MoreHorizontal, MapPin, Image as ImageIcon } from 'lucide-react';
+import { Edit, Trash2, MoreHorizontal, MapPin, Image as ImageIcon, Shapes, Globe, Map, Building2, Landmark, Home } from 'lucide-react';
 import EditZoneModal from './EditZoneModal';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
+import ZoneTree from './ZoneTree';
 
 interface Zone {
   id: string;
@@ -26,6 +29,7 @@ interface Zone {
   latitude?: string | null;
   longitude?: string | null;
   logo?: string | null;
+  zone_type_title?: string | null;
 }
 
 interface ZoneListProps {
@@ -34,35 +38,55 @@ interface ZoneListProps {
   onRefresh: () => void;
 }
 
+const getTypeIcon = (zoneType?: string | null) => {
+  const t = (zoneType || '').toLowerCase();
+  if (t.includes('région') || t.includes('region')) return Globe;
+  if (t.includes('province')) return Map;
+  if (t.includes('ville') || t.includes('city')) return Building2;
+  if (t.includes('arrondissement') || t.includes('district')) return Landmark;
+  if (t.includes('quartier') || t.includes('neighbour') || t.includes('neighborhood')) return Home;
+  return Shapes;
+};
+
 const ZoneList: React.FC<ZoneListProps> = ({ 
   zones, 
   onZoneDeleted, 
   onRefresh 
 }) => {
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Zone | null>(null);
 
-  const handleDelete = async (zoneId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette zone ?')) {
-      return;
-    }
+  const treeRefreshKey = useMemo(() => `${zones.length}-${zones.map(z => z.id).join(',')}`, [zones]);
+
+  const handleDeleteConfirmed = async () => {
+    if (!pendingDelete) return;
+    const zoneId = pendingDelete.id;
+
+    const authRaw = typeof window !== 'undefined' ? localStorage.getItem('authUser') : null;
+    const auth = authRaw ? JSON.parse(authRaw) : null;
+    const authHeader = auth?.token ? { Authorization: `Bearer ${auth.token}` } : ({} as any);
 
     try {
       const response = await fetch(`http://localhost:5000/zones/${zoneId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          ...authHeader,
         },
       });
 
       if (response.ok) {
         onZoneDeleted(zoneId);
+        toast.success('Zone deleted');
       } else {
         const error = await response.json();
-        alert(`Erreur: ${error.error}`);
+        toast.error(error.error || 'Failed to delete zone');
       }
     } catch (error) {
       console.error('Error deleting zone:', error);
-      alert('Erreur lors de la suppression de la zone');
+      toast.error('Erreur lors de la suppression de la zone');
+    } finally {
+      setPendingDelete(null);
     }
   };
 
@@ -97,6 +121,8 @@ const ZoneList: React.FC<ZoneListProps> = ({
 
   return (
     <div className="space-y-4">
+      <ZoneTree refreshKey={treeRefreshKey} />
+
       <div className="flex justify-between items-center">
         <div className="text-sm text-gray-600">
           {zones.length} zone{zones.length > 1 ? 's' : ''} au total
@@ -110,6 +136,7 @@ const ZoneList: React.FC<ZoneListProps> = ({
               <TableHead>Logo</TableHead>
               <TableHead>Zone</TableHead>
               <TableHead>Code</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>GPS</TableHead>
               <TableHead className="w-[50px]">Actions</TableHead>
             </TableRow>
@@ -117,6 +144,7 @@ const ZoneList: React.FC<ZoneListProps> = ({
           <TableBody>
             {zones.map((zone) => {
               const logoUrl = getLogoUrl(zone.logo);
+              const TypeIcon = getTypeIcon(zone.zone_type_title);
               return (
                 <TableRow key={zone.id}>
                   <TableCell>
@@ -138,6 +166,12 @@ const ZoneList: React.FC<ZoneListProps> = ({
                     <Badge variant="secondary">{zone.code}</Badge>
                   </TableCell>
                   <TableCell>
+                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                      <TypeIcon className="h-4 w-4 text-gray-500" />
+                      {zone.zone_type_title || '—'}
+                    </div>
+                  </TableCell>
+                  <TableCell>
                     {zone.latitude && zone.longitude ? (
                       <span className="text-sm text-gray-700">{zone.latitude}, {zone.longitude}</span>
                     ) : (
@@ -156,13 +190,26 @@ const ZoneList: React.FC<ZoneListProps> = ({
                           <Edit className="h-4 w-4 mr-2" />
                           Modifier
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => handleDelete(zone.id)}
-                          className="text-red-600"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Supprimer
-                        </DropdownMenuItem>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem className="text-red-600" onSelect={(e) => { e.preventDefault(); setPendingDelete(zone); }}>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Supprimer
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Supprimer cette zone ?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Cette action est irréversible. La zone sera supprimée définitivement si elle n'est pas utilisée par un projet.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel onClick={() => setPendingDelete(null)}>Annuler</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleDeleteConfirmed} className="bg-red-600 text-white hover:bg-red-700">Supprimer</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

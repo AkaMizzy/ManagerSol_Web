@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Project {
   id: string;
@@ -189,14 +190,15 @@ const CreateControlModal: React.FC<CreateControlModalProps> = ({
           };
 
           onControlCreated(newControl);
+          toast.success('Control assigned');
         }
       } else {
         const error = await response.json();
-        alert(`Erreur: ${error.error}`);
+        toast.error(error.error || "Échec de l'affectation");
       }
     } catch (error) {
       console.error('Error creating control:', error);
-      alert('Erreur lors de la création de l\'affectation');
+      toast.error("Erreur lors de l'affectation");
     } finally {
       setLoading(false);
     }

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Control {
   id: string;
@@ -50,19 +51,24 @@ const EditControlModal: React.FC<EditControlModalProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [users, setUsers] = useState<User[]>([]);
 
+  const authRaw = typeof window !== 'undefined' ? localStorage.getItem('authUser') : null;
+  const auth = authRaw ? JSON.parse(authRaw) : null;
+  const authHeader = auth?.token ? { Authorization: `Bearer ${auth.token}` } : ({} as any);
+
   useEffect(() => {
     fetchUsers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchUsers = async () => {
     try {
-      // Get company ID from the current user's context or localStorage
       const companyId = localStorage.getItem('companyId') || '';
       if (companyId) {
-        const response = await fetch(`http://localhost:5000/users/company/${companyId}`);
+        const response = await fetch(`http://localhost:5000/users/company/${companyId}`, { headers: { 'Content-Type': 'application/json', ...authHeader } });
         if (response.ok) {
           const usersData = await response.json();
-          setUsers(usersData);
+          // Filter out entries with falsy/empty ids to protect Select
+          setUsers((usersData || []).filter((u: User) => u && typeof u.id === 'string' && u.id.trim().length > 0));
         }
       }
     } catch (error) {
@@ -72,34 +78,17 @@ const EditControlModal: React.FC<EditControlModalProps> = ({
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
-    if (!formData.dd) {
-      newErrors.dd = 'La date de début est requise';
-    }
-
-    if (!formData.df) {
-      newErrors.df = 'La date de fin est requise';
-    }
-
-    if (formData.dd && formData.df && new Date(formData.dd) >= new Date(formData.df)) {
-      newErrors.df = 'La date de fin doit être après la date de début';
-    }
-
-    if (!formData.user) {
-      newErrors.user = 'L\'utilisateur est requis';
-    }
-
+    if (!formData.dd) newErrors.dd = 'La date de début est requise';
+    if (!formData.df) newErrors.df = 'La date de fin est requise';
+    if (formData.dd && formData.df && new Date(formData.dd) >= new Date(formData.df)) newErrors.df = 'La date de fin doit être après la date de début';
+    if (!formData.user) newErrors.user = "L'utilisateur est requis";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
+    if (!validateForm()) return;
     setLoading(true);
 
     try {
@@ -107,19 +96,21 @@ const EditControlModal: React.FC<EditControlModalProps> = ({
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          ...authHeader,
         },
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
         onControlUpdated();
+        toast.success('Control updated');
       } else {
         const error = await response.json();
-        alert(`Erreur: ${error.error}`);
+        toast.error(error.error || "Échec de la modification");
       }
     } catch (error) {
       console.error('Error updating control:', error);
-      alert('Erreur lors de la modification de l\'affectation');
+      toast.error("Erreur lors de la modification de l'affectation");
     } finally {
       setLoading(false);
     }
@@ -127,11 +118,7 @@ const EditControlModal: React.FC<EditControlModalProps> = ({
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
   };
 
   return (
@@ -167,62 +154,38 @@ const EditControlModal: React.FC<EditControlModalProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="dd">Date de début *</Label>
-              <Input
-                id="dd"
-                type="date"
-                value={formData.dd}
-                onChange={(e) => handleInputChange('dd', e.target.value)}
-                className={errors.dd ? 'border-red-500' : ''}
-              />
-              {errors.dd && (
-                <p className="text-sm text-red-500">{errors.dd}</p>
-              )}
+              <Input id="dd" type="date" value={formData.dd} onChange={(e) => handleInputChange('dd', e.target.value)} className={errors.dd ? 'border-red-500' : ''} />
+              {errors.dd && (<p className="text-sm text-red-500">{errors.dd}</p>)}
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="df">Date de fin *</Label>
-              <Input
-                id="df"
-                type="date"
-                value={formData.df}
-                onChange={(e) => handleInputChange('df', e.target.value)}
-                className={errors.df ? 'border-red-500' : ''}
-              />
-              {errors.df && (
-                <p className="text-sm text-red-500">{errors.df}</p>
-              )}
+              <Input id="df" type="date" value={formData.df} onChange={(e) => handleInputChange('df', e.target.value)} className={errors.df ? 'border-red-500' : ''} />
+              {errors.df && (<p className="text-sm text-red-500">{errors.df}</p>)}
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="user">Utilisateur *</Label>
-            <Select
-              value={formData.user}
-              onValueChange={(value) => handleInputChange('user', value)}
-            >
+            <Select value={formData.user} onValueChange={(value) => handleInputChange('user', value)}>
               <SelectTrigger className={errors.user ? 'border-red-500' : ''}>
                 <SelectValue placeholder="Sélectionner un utilisateur" />
               </SelectTrigger>
               <SelectContent>
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.firstname} {user.lastname} ({user.email})
-                  </SelectItem>
-                ))}
+                {users
+                  .filter((u) => u && typeof u.id === 'string' && u.id.trim().length > 0)
+                  .map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.firstname} {user.lastname} ({user.email})
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
-            {errors.user && (
-              <p className="text-sm text-red-500">{errors.user}</p>
-            )}
+            {errors.user && (<p className="text-sm text-red-500">{errors.user}</p>)}
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Annuler
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Modification...' : 'Modifier l\'affectation'}
-            </Button>
+            <Button type="button" variant="outline" onClick={onClose}>Annuler</Button>
+            <Button type="submit" disabled={loading}>{loading ? 'Modification...' : "Modifier l'affectation"}</Button>
           </div>
         </form>
       </DialogContent>

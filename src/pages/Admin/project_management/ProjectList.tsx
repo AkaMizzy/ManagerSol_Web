@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { 
   Table, 
   TableBody, 
@@ -16,8 +15,10 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { Edit, Trash2, MoreHorizontal, Calendar, MapPin } from 'lucide-react';
+import { Edit, Trash2, MoreHorizontal, Calendar } from 'lucide-react';
 import EditProjectModal from './EditProjectModal';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
 interface Project {
   id: string;
@@ -25,78 +26,57 @@ interface Project {
   id_company: string;
   dd: string;
   df: string;
-  id_zone: string;
-  zone_title: string;
-  zone_code: string;
-}
-
-interface Zone {
-  id: string;
-  title: string;
-  code: string;
+  status?: string | null;
+  project_type_title?: string | null;
 }
 
 interface ProjectListProps {
   projects: Project[];
-  zones: Zone[];
   onProjectDeleted: (projectId: string) => void;
   onRefresh: () => void;
 }
 
 const ProjectList: React.FC<ProjectListProps> = ({ 
   projects, 
-  zones, 
   onProjectDeleted, 
   onRefresh 
 }) => {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Project | null>(null);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('fr-FR');
   };
 
-  const getStatusColor = (startDate: string, endDate: string) => {
-    const now = new Date();
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+  const handleDeleteConfirmed = async () => {
+    if (!pendingDelete) return;
+    const projectId = pendingDelete.id;
 
-    if (now < start) return 'bg-blue-100 text-blue-800';
-    if (now > end) return 'bg-red-100 text-red-800';
-    return 'bg-green-100 text-green-800';
-  };
-
-  const getStatusText = (startDate: string, endDate: string) => {
-    const now = new Date();
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    if (now < start) return 'À venir';
-    if (now > end) return 'Terminé';
-    return 'En cours';
-  };
-
-  const handleDelete = async (projectId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce projet ?')) {
-      return;
-    }
+    const authRaw = typeof window !== 'undefined' ? localStorage.getItem('authUser') : null;
+    const auth = authRaw ? JSON.parse(authRaw) : null;
+    const authHeader = auth?.token ? { Authorization: `Bearer ${auth.token}` } : ({} as any);
 
     try {
       const response = await fetch(`http://localhost:5000/projects/${projectId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          ...authHeader,
         },
       });
 
       if (response.ok) {
         onProjectDeleted(projectId);
+        toast.success('Project deleted');
       } else {
         const error = await response.json();
-        alert(`Erreur: ${error.error}`);
+        toast.error(error.error || 'Failed to delete project');
       }
     } catch (error) {
       console.error('Error deleting project:', error);
-      alert('Erreur lors de la suppression du projet');
+      toast.error('Erreur lors de la suppression du projet');
+    } finally {
+      setPendingDelete(null);
     }
   };
 
@@ -136,8 +116,8 @@ const ProjectList: React.FC<ProjectListProps> = ({
           <TableHeader>
             <TableRow>
               <TableHead>Projet</TableHead>
-              <TableHead>Zone</TableHead>
               <TableHead>Dates</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Statut</TableHead>
               <TableHead className="w-[50px]">Actions</TableHead>
             </TableRow>
@@ -146,18 +126,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
             {projects.map((project) => (
               <TableRow key={project.id}>
                 <TableCell>
-                  <div>
-                    <div className="font-medium">{project.title}</div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-gray-500" />
-                    <div>
-                      <div className="font-medium">{project.zone_title}</div>
-                      <div className="text-sm text-gray-500">{project.zone_code}</div>
-                    </div>
-                  </div>
+                  <div className="font-medium">{project.title}</div>
                 </TableCell>
                 <TableCell>
                   <div className="text-sm">
@@ -166,9 +135,10 @@ const ProjectList: React.FC<ProjectListProps> = ({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge className={getStatusColor(project.dd, project.df)}>
-                    {getStatusText(project.dd, project.df)}
-                  </Badge>
+                  <div className="text-sm text-gray-800">{project.project_type_title || '—'}</div>
+                </TableCell>
+                <TableCell>
+                  <div className="text-sm text-gray-800">{project.status || '—'}</div>
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
@@ -182,13 +152,26 @@ const ProjectList: React.FC<ProjectListProps> = ({
                         <Edit className="h-4 w-4 mr-2" />
                         Modifier
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleDelete(project.id)}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Supprimer
-                      </DropdownMenuItem>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <DropdownMenuItem className="text-red-600" onSelect={(e) => { e.preventDefault(); setPendingDelete(project); }}>
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Supprimer
+                          </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Supprimer ce projet ?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Cette action est irréversible. Le projet sera supprimé définitivement.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel onClick={() => setPendingDelete(null)}>Annuler</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteConfirmed} className="bg-red-600 text-white hover:bg-red-700">Supprimer</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -201,7 +184,6 @@ const ProjectList: React.FC<ProjectListProps> = ({
       {editingProject && (
         <EditProjectModal
           project={editingProject}
-          zones={zones}
           onClose={() => setEditingProject(null)}
           onProjectUpdated={handleProjectUpdated}
         />

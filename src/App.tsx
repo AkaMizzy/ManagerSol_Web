@@ -16,6 +16,7 @@ import TaskGroupModels from "./pages/Admin/task_management/TaskGroupModels";
 import TaskGroupElementBoard from "./pages/Admin/task_management/TaskGroupElementBoard";
 import ProjectManagement from "./pages/Admin/project_management/ProjectManagement";
 import Login from "./pages/Login";
+import UserProfile from "./pages/Profile/UserProfile";
 
 const queryClient = new QueryClient();
 
@@ -72,6 +73,7 @@ function ProtectedApp() {
         <Route path="/task-elements" element={<ProtectedRoute allowedRoles={["admin"]}><TaskElements /></ProtectedRoute>} />
         <Route path="/task-group-models" element={<ProtectedRoute allowedRoles={["admin"]}><TaskGroupModels /></ProtectedRoute>} />
         <Route path="/task-group-elements" element={<ProtectedRoute allowedRoles={["admin"]}><TaskGroupElementBoard /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute allowedRoles={["superAdmin","admin","user"]}><UserProfile /></ProtectedRoute>} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
