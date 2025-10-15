@@ -17,6 +17,10 @@ import TaskGroupElementBoard from "./pages/Admin/task_management/TaskGroupElemen
 import ProjectManagement from "./pages/Admin/project_management/ProjectManagement";
 import Login from "./pages/Login";
 import UserProfile from "./pages/Profile/UserProfile";
+import ModulesPage from "./pages/SuperAdmin/modules/ModulesPage";
+import Splash from "./pages/Splash";
+
+
 
 const queryClient = new QueryClient();
 
@@ -69,6 +73,8 @@ function ProtectedApp() {
         <Route path="/companies/:id" element={<ProtectedRoute allowedRoles={["superAdmin"]}><CompanyDetailWrapper /></ProtectedRoute>} />
         <Route path="/create-company" element={<ProtectedRoute allowedRoles={["superAdmin"]}><CreateCompany /></ProtectedRoute>} />
         <Route path="/users" element={<ProtectedRoute allowedRoles={["admin"]}><User /></ProtectedRoute>} />
+        <Route path="/superadmin/modules" element={<ProtectedRoute allowedRoles={["superAdmin"]}><ModulesPage /></ProtectedRoute>} />
+
         <Route path="/project-management" element={<ProtectedRoute allowedRoles={["admin"]}><ProjectManagement /></ProtectedRoute>} />
         <Route path="/task-elements" element={<ProtectedRoute allowedRoles={["admin"]}><TaskElements /></ProtectedRoute>} />
         <Route path="/task-group-models" element={<ProtectedRoute allowedRoles={["admin"]}><TaskGroupModels /></ProtectedRoute>} />
@@ -89,6 +95,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<LandingRoute />} />
+          <Route path="/splash" element={<Splash />} />
           <Route path="/*" element={<ProtectedApp />} />
         </Routes>
       </BrowserRouter>

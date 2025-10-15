@@ -1,10 +1,11 @@
-import { Building2, Users, Home, List, FolderTree, ShieldCheck } from "lucide-react"
+import { Building2, Users, Home, List, FolderTree, ShieldCheck, Layers3 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 
 const items = [
   { title: "Admin Center", url: "/dashboard", icon: Home },
   { title: "Companies", url: "/companies", icon: Building2 },
+  { title: "Modules", url: "/superadmin/modules", icon: Layers3 },
   
 ]
 

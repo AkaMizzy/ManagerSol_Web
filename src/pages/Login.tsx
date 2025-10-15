@@ -52,10 +52,8 @@ export default function Login() {
         }
       }
 
-      if (role === 'superAdmin' || role === 'admin') {
-        navigate('/dashboard')
-      } else if (role === 'user') {
-        setError('Your account does not have access to the admin area.')
+      if (role === 'superAdmin' || role === 'admin' || role === 'user') {
+        navigate('/splash')
       } else {
         setError('Unauthorized role.')
       }
